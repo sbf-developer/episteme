@@ -36,6 +36,15 @@ fileRoutes.get("/:id", async (c) => {
   const userId = c.get("userId");
   const file = await prisma.fileUpload.findFirst({
     where: { id: c.req.param("id"), userId },
+    select: {
+      id: true,
+      filename: true,
+      mimeType: true,
+      size: true,
+      extractedText: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   });
   if (!file) return c.json({ error: "Not found" }, 404);
   return c.json(file);
@@ -58,6 +67,7 @@ fileRoutes.post("/", async (c) => {
   if (!check.ok) return c.json({ error: check.error }, 400);
 
   const extractedText = await extractText(buffer, filename);
+
   const record = await prisma.fileUpload.create({
     data: {
       userId,
@@ -67,15 +77,30 @@ fileRoutes.post("/", async (c) => {
       storagePath: "",
       extractedText,
     },
+    select: { id: true },
   });
 
-  const storagePath = await saveUploadedFile(userId, record.id, buffer);
-  const updated = await prisma.fileUpload.update({
-    where: { id: record.id },
-    data: { storagePath },
-  });
+  try {
+    const storagePath = await saveUploadedFile(userId, record.id, buffer);
+    const updated = await prisma.fileUpload.update({
+      where: { id: record.id },
+      data: { storagePath },
+      select: {
+        id: true,
+        filename: true,
+        mimeType: true,
+        size: true,
+        extractedText: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
-  return c.json(updated, 201);
+    return c.json(updated, 201);
+  } catch (err) {
+    await prisma.fileUpload.delete({ where: { id: record.id } }).catch(() => {});
+    throw err;
+  }
 });
 
 fileRoutes.delete("/:id", async (c) => {

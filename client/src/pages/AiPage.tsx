@@ -30,21 +30,22 @@ export function AiPage() {
   const [sending, setSending] = useState(false);
   const [loadingThread, setLoadingThread] = useState(false);
   const [loadingThreads, setLoadingThreads] = useState(true);
+  const [threadsError, setThreadsError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const openRequestRef = useRef(0);
 
   const loadThreads = useCallback(async (q?: string) => {
     setLoadingThreads(true);
+    setThreadsError(null);
     try {
       const list = await api.ai.threads(q);
       setThreads(list);
+    } catch (err) {
+      setThreadsError(err instanceof Error ? err.message : "Failed to load chats");
     } finally {
       setLoadingThreads(false);
     }
   }, []);
-
-  useEffect(() => {
-    loadThreads();
-  }, [loadThreads]);
 
   useEffect(() => {
     if (!threadSearch.trim()) {
@@ -67,19 +68,30 @@ export function AiPage() {
 
   const openThread = async (id: string) => {
     if (id === threadId) return;
+    const requestId = ++openRequestRef.current;
     setMessages([]);
     setLoadingThread(true);
     try {
       const thread = await api.ai.thread(id);
+      if (requestId !== openRequestRef.current) return;
       setThreadId(thread.id);
       setMessages(thread.messages);
+    } catch (err) {
+      if (requestId !== openRequestRef.current) return;
+      setMessages([
+        {
+          id: `err-${Date.now()}`,
+          role: "ASSISTANT",
+          content: err instanceof Error ? err.message : "Failed to load chat",
+          createdAt: new Date().toISOString(),
+        },
+      ]);
     } finally {
-      setLoadingThread(false);
+      if (requestId === openRequestRef.current) setLoadingThread(false);
     }
   };
 
-  const deleteThread = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const deleteThread = async (id: string) => {
     if (!confirm("Delete this conversation?")) return;
     await api.ai.deleteThread(id);
     if (threadId === id) startNewChat();
@@ -159,6 +171,8 @@ export function AiPage() {
         <div className="flex-1 overflow-y-auto p-2">
           {loadingThreads ? (
             <p className="px-2 py-4 text-center text-xs text-[var(--color-text-tertiary)]">Loading…</p>
+          ) : threadsError ? (
+            <p className="px-2 py-4 text-center text-xs text-red-600">{threadsError}</p>
           ) : threads.length === 0 ? (
             <p className="px-2 py-4 text-center text-xs text-[var(--color-text-tertiary)]">
               {threadSearch ? "No chats found" : "No conversations yet"}
@@ -167,36 +181,38 @@ export function AiPage() {
             threads.map((t) => (
               <div
                 key={t.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => openThread(t.id)}
-                onKeyDown={(e) => e.key === "Enter" && openThread(t.id)}
-                className={`group mb-0.5 flex w-full cursor-pointer flex-col rounded-[var(--radius-sm)] px-2.5 py-2 text-left transition-colors ${
+                className={`group mb-0.5 flex w-full items-start gap-1 rounded-[var(--radius-sm)] px-2.5 py-2 transition-colors ${
                   threadId === t.id
                     ? "bg-white shadow-sm"
                     : "hover:bg-white/60"
                 }`}
               >
-                <div className="flex items-start justify-between gap-1">
-                  <span className="line-clamp-1 flex-1 text-xs font-medium text-[var(--color-text)]">
-                    {t.title}
-                  </span>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <span className="text-[10px] text-[var(--color-text-tertiary)]">
+                <button
+                  type="button"
+                  onClick={() => openThread(t.id)}
+                  className="min-w-0 flex-1 cursor-pointer text-left"
+                >
+                  <div className="flex items-start justify-between gap-1">
+                    <span className="line-clamp-1 flex-1 text-xs font-medium text-[var(--color-text)]">
+                      {t.title}
+                    </span>
+                    <span className="shrink-0 text-[10px] text-[var(--color-text-tertiary)]">
                       {formatRelative(t.updatedAt)}
                     </span>
-                    <button
-                      onClick={(e) => deleteThread(t.id, e)}
-                      className="rounded p-0.5 text-[var(--color-text-tertiary)] opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
-                      title="Delete chat"
-                    >
-                      <Trash2 size={12} />
-                    </button>
                   </div>
-                </div>
-                <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[var(--color-text-tertiary)]">
-                  {threadPreview(t)}
-                </p>
+                  <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[var(--color-text-tertiary)]">
+                    {threadPreview(t)}
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteThread(t.id)}
+                  className="mt-0.5 shrink-0 rounded p-0.5 text-[var(--color-text-tertiary)] opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
+                  title="Delete chat"
+                  aria-label={`Delete ${t.title}`}
+                >
+                  <Trash2 size={12} />
+                </button>
               </div>
             ))
           )}

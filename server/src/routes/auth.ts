@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { Hono, type Context, type Next } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { prisma } from "../lib/prisma.js";
@@ -8,8 +9,10 @@ import {
   sessionCookieName,
   sessionCookieOptions,
 } from "../lib/auth.js";
-import { getEnv, googleAuthConfigured } from "../lib/env.js";
+import { getEnv, googleAuthConfigured, cookieSecure } from "../lib/env.js";
 type Variables = { userId: string };
+
+const OAUTH_STATE_COOKIE = "pe_oauth_state";
 
 export const authRoutes = new Hono<{ Variables: Variables }>();
 
@@ -27,12 +30,24 @@ authRoutes.get("/google", (c) => {
     return c.json({ error: "Google OAuth not configured" }, 500);
   }
 
+  const state = randomBytes(32).toString("hex");
+  const stateExpires = new Date(Date.now() + 10 * 60 * 1000);
+  setCookie(c, OAUTH_STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: cookieSecure(),
+    sameSite: "Lax",
+    path: "/",
+    expires: stateExpires,
+  });
+
   const params = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID!,
-    redirect_uri: `${env.APP_URL}/api/auth/google/callback`,    response_type: "code",
+    redirect_uri: `${env.APP_URL}/api/auth/google/callback`,
+    response_type: "code",
     scope: "openid email profile",
     access_type: "online",
     prompt: "select_account",
+    state,
   });
 
   return c.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
@@ -40,9 +55,19 @@ authRoutes.get("/google", (c) => {
 
 authRoutes.get("/google/callback", async (c) => {
   const code = c.req.query("code");
+  const state = c.req.query("state");
+  const savedState = getCookie(c, OAUTH_STATE_COOKIE);
   const env = getEnv();
 
-  if (!code || !googleAuthConfigured()) {
+  deleteCookie(c, OAUTH_STATE_COOKIE, { path: "/" });
+
+  if (
+    !code ||
+    !googleAuthConfigured() ||
+    !state ||
+    !savedState ||
+    state !== savedState
+  ) {
     return c.redirect(`${env.CLIENT_URL}/login?error=auth_failed`);
   }
 

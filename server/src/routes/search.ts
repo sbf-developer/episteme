@@ -10,7 +10,7 @@ searchRoutes.use("*", requireAuth);
 
 searchRoutes.get("/", async (c) => {
   const userId = c.get("userId");
-  const q = c.req.query("q")?.trim();
+  const q = c.req.query("q")?.trim().slice(0, 200);
   if (!q) return c.json({ results: [] });
 
   const [documents, goals, actions, events, files] = await Promise.all([

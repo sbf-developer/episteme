@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "./auth.js";
+import { assertEntityOwned } from "../lib/ownership.js";
 import { z } from "zod";
 
 type Variables = { userId: string };
@@ -108,7 +109,7 @@ connectionRoutes.put("/layout", async (c) => {
           x: z.number(),
           y: z.number(),
         })
-      ),
+      ).max(500),
     })
     .parse(await c.req.json());
 
@@ -128,6 +129,8 @@ connectionRoutes.put("/layout", async (c) => {
 connectionRoutes.post("/", async (c) => {
   const userId = c.get("userId");
   const body = connectionSchema.parse(await c.req.json());
+  await assertEntityOwned(userId, body.sourceType, body.sourceId);
+  await assertEntityOwned(userId, body.targetType, body.targetId);
   const connection = await prisma.connection.create({
     data: { userId, ...body },
   });

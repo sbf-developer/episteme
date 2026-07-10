@@ -16,6 +16,7 @@ export function SearchBar({ collapsed = false, className = "" }: SearchBarProps)
   const [expanded, setExpanded] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchRequestRef = useRef(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,14 +25,20 @@ export function SearchBar({ collapsed = false, className = "" }: SearchBarProps)
       return;
     }
 
+    const requestId = ++searchRequestRef.current;
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
         const { results } = await api.search(query);
+        if (requestId !== searchRequestRef.current) return;
         setResults(results);
         setOpen(true);
+      } catch {
+        if (requestId !== searchRequestRef.current) return;
+        setResults([]);
+        setOpen(true);
       } finally {
-        setLoading(false);
+        if (requestId === searchRequestRef.current) setLoading(false);
       }
     }, 250);
 

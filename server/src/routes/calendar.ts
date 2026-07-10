@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "./auth.js";
+import { validateActionRef, validateGoalRef } from "../lib/ownership.js";
 import { z } from "zod";
 
 type Variables = { userId: string };
@@ -56,6 +57,8 @@ calendarRoutes.get("/:id", async (c) => {
 calendarRoutes.post("/", async (c) => {
   const userId = c.get("userId");
   const body = eventSchema.parse(await c.req.json());
+  await validateGoalRef(userId, body.goalId);
+  await validateActionRef(userId, body.actionId);
   const event = await prisma.calendarEvent.create({
     data: {
       userId,
@@ -79,6 +82,9 @@ calendarRoutes.patch("/:id", async (c) => {
     where: { id: c.req.param("id"), userId },
   });
   if (!existing) return c.json({ error: "Not found" }, 404);
+
+  await validateGoalRef(userId, body.goalId);
+  await validateActionRef(userId, body.actionId);
 
   const event = await prisma.calendarEvent.update({
     where: { id: existing.id },

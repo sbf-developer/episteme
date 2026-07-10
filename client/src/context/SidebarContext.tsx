@@ -21,7 +21,9 @@ const SidebarContext = createContext<SidebarContextType | null>(null);
 export function SidebarProvider({ children }: { children: ReactNode }) {
   const [width, setWidthState] = useState(() => {
     const saved = localStorage.getItem("sidebar-width");
-    return saved ? Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Number(saved))) : DEFAULT_WIDTH;
+    const parsed = saved ? Number(saved) : DEFAULT_WIDTH;
+    if (!Number.isFinite(parsed)) return DEFAULT_WIDTH;
+    return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, parsed));
   });
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem("sidebar-collapsed") === "true"

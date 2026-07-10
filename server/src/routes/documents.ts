@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "./auth.js";
+import { validateDocumentParent } from "../lib/ownership.js";
 import { z } from "zod";
 
 type Variables = { userId: string };
@@ -38,6 +39,7 @@ documentRoutes.get("/:id", async (c) => {
 documentRoutes.post("/", async (c) => {
   const userId = c.get("userId");
   const body = documentSchema.parse(await c.req.json());
+  await validateDocumentParent(userId, body.parentId);
   const doc = await prisma.document.create({
     data: { userId, ...body, content: body.content ?? "" },
   });
@@ -51,6 +53,8 @@ documentRoutes.patch("/:id", async (c) => {
     where: { id: c.req.param("id"), userId },
   });
   if (!existing) return c.json({ error: "Not found" }, 404);
+
+  await validateDocumentParent(userId, body.parentId, existing.id);
 
   const doc = await prisma.document.update({
     where: { id: existing.id },

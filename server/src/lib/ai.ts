@@ -193,7 +193,7 @@ export async function chatWithDeepSeek(
   const env = getEnv();
 
   if (!env.DEEPSEEK_API_KEY) {
-    return "DeepSeek API key is not configured. Add DEEPSEEK_API_KEY to your environment.";
+    throw new Error("DeepSeek API key is not configured");
   }
 
   const response = await fetch(`${env.DEEPSEEK_BASE_URL}/v1/chat/completions`, {

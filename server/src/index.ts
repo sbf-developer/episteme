@@ -4,7 +4,9 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
+import { OwnershipError } from "./lib/ownership.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import { authRoutes } from "./routes/auth.js";
@@ -67,6 +69,13 @@ app.route("/api/search", searchRoutes);
 app.onError((err, c) => {
   if (err instanceof ZodError) {
     return c.json({ error: "Validation failed", details: err.flatten() }, 400);
+  }
+  if (err instanceof OwnershipError) {
+    return c.json({ error: err.message }, 400);
+  }
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === "P2002") return c.json({ error: "Already exists" }, 409);
+    if (err.code === "P2003") return c.json({ error: "Invalid reference" }, 400);
   }
   console.error(err);
   return c.json({ error: "Internal server error" }, 500);

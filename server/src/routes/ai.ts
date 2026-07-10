@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "./auth.js";
 import { buildSystemPrompt, chatWithDeepSeek, fetchUserContext } from "../lib/ai.js";
+import { getEnv } from "../lib/env.js";
 import { z } from "zod";
 
 type Variables = { userId: string };
@@ -12,7 +13,7 @@ aiRoutes.use("*", requireAuth);
 
 aiRoutes.get("/threads", async (c) => {
   const userId = c.get("userId");
-  const q = c.req.query("q")?.trim();
+  const q = c.req.query("q")?.trim().slice(0, 200);
 
   const threads = await prisma.aiThread.findMany({
     where: {
@@ -59,9 +60,15 @@ aiRoutes.post("/threads", async (c) => {
 
 aiRoutes.post("/chat", async (c) => {
   const userId = c.get("userId");
+  const env = getEnv();
+
+  if (!env.DEEPSEEK_API_KEY) {
+    return c.json({ error: "AI service is not configured" }, 503);
+  }
+
   const body = z
     .object({
-      message: z.string().min(1),
+      message: z.string().min(1).max(8000),
       threadId: z.string().optional(),
     })
     .parse(await c.req.json());
@@ -100,7 +107,13 @@ aiRoutes.post("/chat", async (c) => {
       content: m.content,
     }));
 
-  const reply = await chatWithDeepSeek(systemPrompt, messages);
+  let reply: string;
+  try {
+    reply = await chatWithDeepSeek(systemPrompt, messages);
+  } catch {
+    await prisma.aiMessage.delete({ where: { id: userMsg.id } });
+    return c.json({ error: "AI service unavailable" }, 503);
+  }
 
   const assistantMsg = await prisma.aiMessage.create({
     data: { threadId, role: "ASSISTANT", content: reply },

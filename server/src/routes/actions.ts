@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "./auth.js";
+import { validateGoalRef } from "../lib/ownership.js";
 import { z } from "zod";
 
 type Variables = { userId: string };
@@ -35,6 +36,7 @@ actionRoutes.get("/", async (c) => {
 actionRoutes.post("/", async (c) => {
   const userId = c.get("userId");
   const body = actionSchema.parse(await c.req.json());
+  await validateGoalRef(userId, body.goalId);
   const action = await prisma.action.create({
     data: {
       userId,
@@ -56,6 +58,8 @@ actionRoutes.patch("/:id", async (c) => {
     where: { id: c.req.param("id"), userId },
   });
   if (!existing) return c.json({ error: "Not found" }, 404);
+
+  await validateGoalRef(userId, body.goalId);
 
   const action = await prisma.action.update({
     where: { id: existing.id },
