@@ -1,0 +1,16 @@
+[Unit]
+Description=Episteme App
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/episteme
+EnvironmentFile=/var/www/episteme/.env
+ExecStartPre=/usr/bin/npm run db:migrate:deploy
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
