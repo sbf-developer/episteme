@@ -1,7 +1,7 @@
+-- prisma:disable-transaction
 -- AlterEnum
-ALTER TYPE "EntityType" ADD VALUE 'CALENDAR_EVENT';
-ALTER TYPE "EntityType" ADD VALUE 'FILE';
-
+ALTER TYPE "EntityType" ADD VALUE IF NOT EXISTS 'CALENDAR_EVENT';
+ALTER TYPE "EntityType" ADD VALUE IF NOT EXISTS 'FILE';
 -- CreateTable
 CREATE TABLE "CalendarEvent" (
     "id" TEXT NOT NULL,

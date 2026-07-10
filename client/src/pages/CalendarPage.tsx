@@ -19,7 +19,12 @@ function formatMonth(d: Date) {
 }
 
 function toDateInput(d: Date) {
-  return d.toISOString().slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function eventDayKey(iso: string) {
+  return toDateInput(new Date(iso));
 }
 
 function toDatetimeLocal(d: Date) {
@@ -67,7 +72,7 @@ export function CalendarPage() {
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     for (const e of events) {
-      const key = e.startAt.slice(0, 10);
+      const key = eventDayKey(e.startAt);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(e);
     }
@@ -75,7 +80,7 @@ export function CalendarPage() {
   }, [events]);
 
   const selectedEvents = selected
-    ? events.filter((e) => e.startAt.slice(0, 10) === selected)
+    ? events.filter((e) => eventDayKey(e.startAt) === selected)
     : [];
 
   const create = async () => {
