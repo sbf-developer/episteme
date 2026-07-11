@@ -80,7 +80,7 @@ export function ActionsPage() {
       </div>
 
       <ActionList
-        title="To do"
+        title="Active"
         actions={active}
         goals={goals}
         onCycle={cycleStatus}
