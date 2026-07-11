@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Search, Send, Trash2, X, PanelLeft, SlidersHorizontal } from "lucide-react";
+import { Plus, Search, Send, Trash2, X, PanelLeft, PanelLeftClose, SlidersHorizontal } from "lucide-react";
 import { api, type AiMessage, type AiThreadListItem } from "@/lib/api";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 const NARROW_QUERY = "(max-width: 1023px)";
+const HISTORY_OPEN_KEY = "ai-history-open";
 
 const SUGGESTIONS = [
   "What should I focus on this week?",
@@ -41,7 +42,12 @@ function threadPreview(thread: AiThreadListItem) {
 
 export function AiPage() {
   const isNarrow = useMediaQuery(NARROW_QUERY);
-  const [showThreads, setShowThreads] = useState(false);
+  const [showThreads, setShowThreads] = useState(() => {
+    if (typeof window === "undefined") return true;
+    if (window.matchMedia(NARROW_QUERY).matches) return false;
+    const saved = localStorage.getItem(HISTORY_OPEN_KEY);
+    return saved === null ? true : saved === "true";
+  });
   const [threads, setThreads] = useState<AiThreadListItem[]>([]);
   const [threadSearch, setThreadSearch] = useState("");
   const [messages, setMessages] = useState<AiMessage[]>([]);
@@ -134,7 +140,12 @@ export function AiPage() {
   }, [threadSearch, loadThreads]);
 
   useEffect(() => {
-    if (!isNarrow) setShowThreads(false);
+    if (isNarrow) {
+      setShowThreads(false);
+    } else {
+      const saved = localStorage.getItem(HISTORY_OPEN_KEY);
+      setShowThreads(saved === null ? true : saved === "true");
+    }
   }, [isNarrow]);
 
   useEffect(() => {
@@ -148,7 +159,14 @@ export function AiPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
-  const closeThreads = () => setShowThreads(false);
+  const closeThreads = () => {
+    setShowThreads(false);
+    if (!isNarrow) localStorage.setItem(HISTORY_OPEN_KEY, "false");
+  };
+  const openThreads = () => {
+    setShowThreads(true);
+    if (!isNarrow) localStorage.setItem(HISTORY_OPEN_KEY, "true");
+  };
 
   const startNewChat = () => {
     sendRequestRef.current += 1;
@@ -256,25 +274,23 @@ export function AiPage() {
     }
   };
 
-  const threadPanel = (
+  const threadPanel = showThreads ? (
     <div
       className={`flex h-full min-h-0 w-[min(88vw,18rem)] shrink-0 flex-col border-r border-[var(--color-border-subtle)] bg-[var(--color-sidebar)] lg:w-60 ${
         isNarrow
-          ? `fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out ${
-              showThreads ? "translate-x-0" : "-translate-x-full"
-            }`
-          : "relative translate-x-0"
+          ? "fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out translate-x-0"
+          : "relative"
       }`}
     >
-      <div className="flex shrink-0 items-center justify-between px-4 py-3 lg:hidden">
-        <span className="text-sm font-medium text-[var(--color-text)]">History</span>
+      <div className="flex shrink-0 items-center justify-between px-3 py-3">
+        <span className="text-xs font-medium text-[var(--color-text-tertiary)]">History</span>
         <button
           type="button"
           onClick={closeThreads}
-          aria-label="Close chat history"
+          aria-label="Hide chat history"
           className="rounded-full p-1.5 text-[var(--color-text-tertiary)] transition-colors hover:bg-white/80 hover:text-[var(--color-text)]"
         >
-          <X size={16} />
+          {isNarrow ? <X size={16} /> : <PanelLeftClose size={16} strokeWidth={1.75} />}
         </button>
       </div>
 
@@ -359,7 +375,7 @@ export function AiPage() {
         )}
       </div>
     </div>
-  );
+  ) : null;
 
   return (
     <div className="relative flex h-full min-h-0 bg-[var(--color-surface)]">
@@ -376,11 +392,11 @@ export function AiPage() {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex shrink-0 items-center gap-1 px-3 py-3 sm:px-5">
-          {isNarrow && (
+          {!showThreads && (
             <button
               type="button"
-              onClick={() => setShowThreads(true)}
-              aria-label="Open chat history"
+              onClick={openThreads}
+              aria-label="Show chat history"
               className="shrink-0 rounded-full p-2 text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-border-subtle)] hover:text-[var(--color-text)]"
             >
               <PanelLeft size={17} strokeWidth={1.75} />
