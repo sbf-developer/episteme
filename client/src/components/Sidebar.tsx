@@ -1,40 +1,22 @@
 import { useCallback, useEffect, useRef } from "react";
 import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard,
-  FileText,
-  Target,
-  GitBranch,
-  MessageSquare,
   LogOut,
-  Calendar,
-  FolderUp,
   PanelLeftClose,
   PanelLeft,
   X,
-  Gauge,
-  ListTodo,
-  Settings,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSidebar } from "@/context/SidebarContext";
+import { useSidebarNav } from "@/context/SidebarNavContext";
+import { resolveSidebarNav, SETTINGS_NAV_ITEM } from "@/lib/sidebar-nav";
 import { SearchBar } from "@/components/SearchBar";
-
-const nav = [
-  { to: "/", icon: LayoutDashboard, label: "Home" },
-  { to: "/calendar", icon: Calendar, label: "Calendar" },
-  { to: "/notes", icon: FileText, label: "Notes" },
-  { to: "/documents", icon: FolderUp, label: "Documents" },
-  { to: "/goals", icon: Target, label: "Goals" },
-  { to: "/kpis", icon: Gauge, label: "KPIs" },
-  { to: "/do-list", icon: ListTodo, label: "Do-list" },
-  { to: "/graph", icon: GitBranch, label: "Graph" },
-  { to: "/ai", icon: MessageSquare, label: "AI" },
-  { to: "/settings", icon: Settings, label: "Settings" },
-];
 
 export function Sidebar() {
   const { user, logout } = useAuth();
+  const { layout } = useSidebarNav();
+  const navItems = resolveSidebarNav(layout);
+  const { to: settingsTo, icon: SettingsIcon, label: settingsLabel } = SETTINGS_NAV_ITEM;
   const {
     collapsed,
     effectiveWidth,
@@ -114,7 +96,7 @@ export function Sidebar() {
       </div>
 
       <nav aria-label="Main" className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden px-3">
-        {nav.map(({ to, icon: Icon, label }) => (
+        {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
@@ -135,6 +117,23 @@ export function Sidebar() {
             {(!collapsed || isMobile) && <span className="truncate">{label}</span>}
           </NavLink>
         ))}
+        <NavLink
+          to={settingsTo}
+          title={collapsed && !isMobile ? settingsLabel : undefined}
+          onClick={closeMobile}
+          className={({ isActive }) =>
+            `flex items-center rounded-[var(--radius-sm)] text-sm transition-colors ${
+              collapsed && !isMobile ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2"
+            } ${
+              isActive
+                ? "bg-white font-medium text-[var(--color-text)] shadow-sm"
+                : "text-[var(--color-text-secondary)] hover:bg-white/60 hover:text-[var(--color-text)]"
+            }`
+          }
+        >
+          <SettingsIcon size={16} strokeWidth={1.75} className="shrink-0" />
+          {(!collapsed || isMobile) && <span className="truncate">{settingsLabel}</span>}
+        </NavLink>
       </nav>
 
       <div className="border-t border-[var(--color-border)] p-3">

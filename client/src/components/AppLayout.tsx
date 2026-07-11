@@ -2,6 +2,7 @@ import { Outlet, Navigate } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { SidebarProvider, useSidebar } from "@/context/SidebarContext";
+import { SidebarNavProvider } from "@/context/SidebarNavContext";
 import { Sidebar } from "@/components/Sidebar";
 
 function LayoutShell() {
@@ -49,8 +50,10 @@ export function AppLayout() {
   if (!user.onboardingCompletedAt) return <Navigate to="/onboarding" replace />;
 
   return (
-    <SidebarProvider>
-      <LayoutShell />
-    </SidebarProvider>
+    <SidebarNavProvider>
+      <SidebarProvider>
+        <LayoutShell />
+      </SidebarProvider>
+    </SidebarNavProvider>
   );
 }

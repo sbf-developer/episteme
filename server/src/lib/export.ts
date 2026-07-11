@@ -42,6 +42,7 @@ type ExportContent = {
     name: string | null;
     aiInstructions: string;
     overviewLayout: unknown;
+    sidebarLayout: unknown;
     onboardingCompletedAt: Date | null;
     createdAt: Date;
   } | null;
@@ -143,6 +144,7 @@ async function loadExportContent(
             name: true,
             aiInstructions: true,
             overviewLayout: true,
+            sidebarLayout: true,
             onboardingCompletedAt: true,
             createdAt: true,
           },

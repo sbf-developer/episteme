@@ -8,6 +8,11 @@ import {
   overviewLayoutSchema,
 } from "../lib/overview-layout.js";
 import {
+  DEFAULT_SIDEBAR_LAYOUT,
+  normalizeSidebarLayout,
+  sidebarLayoutSchema,
+} from "../lib/sidebar-layout.js";
+import {
   EXPORT_SECTIONS,
   buildExportPdf,
   buildExportZip,
@@ -63,6 +68,30 @@ settingsRoutes.patch("/overview", async (c) => {
   await prisma.user.update({
     where: { id: userId },
     data: { overviewLayout: layout },
+  });
+
+  return c.json(layout);
+});
+
+settingsRoutes.get("/sidebar", async (c) => {
+  const userId = c.get("userId");
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { sidebarLayout: true },
+  });
+
+  const layout = normalizeSidebarLayout(user.sidebarLayout ?? DEFAULT_SIDEBAR_LAYOUT);
+  return c.json(layout);
+});
+
+settingsRoutes.patch("/sidebar", async (c) => {
+  const userId = c.get("userId");
+  const body = sidebarLayoutSchema.parse(await c.req.json());
+  const layout = normalizeSidebarLayout(body);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { sidebarLayout: layout },
   });
 
   return c.json(layout);

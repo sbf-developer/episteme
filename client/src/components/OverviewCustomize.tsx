@@ -1,15 +1,32 @@
 import { useRef, useState } from "react";
 import { GripVertical, Eye, EyeOff, RotateCcw } from "lucide-react";
-import { OVERVIEW_SECTION_LABELS, type OverviewLayout, type OverviewSectionConfig } from "@/lib/overview";
 
-type Props = {
-  layout: OverviewLayout;
-  onChange: (layout: OverviewLayout) => void;
-  onReset: () => void;
-  saving?: boolean;
+export type LayoutSectionConfig = {
+  id: string;
+  visible: boolean;
 };
 
-export function OverviewCustomize({ layout, onChange, onReset, saving }: Props) {
+export type LayoutConfig = {
+  sections: LayoutSectionConfig[];
+};
+
+type Props = {
+  layout: LayoutConfig;
+  labels: Record<string, string>;
+  onChange: (layout: LayoutConfig) => void;
+  onReset: () => void;
+  saving?: boolean;
+  hint?: string;
+};
+
+export function OverviewCustomize({
+  layout,
+  labels,
+  onChange,
+  onReset,
+  saving,
+  hint = "Drag to reorder. Hide sections you don't need — nothing is deleted.",
+}: Props) {
   const dragId = useRef<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
@@ -35,15 +52,14 @@ export function OverviewCustomize({ layout, onChange, onReset, saving }: Props) 
 
   return (
     <div className="rounded-xl bg-[var(--color-border-subtle)] px-3 py-4 sm:px-4">
-      <p className="mb-3 text-xs text-[var(--color-text-tertiary)]">
-        Drag to reorder. Hide sections you don&apos;t need — nothing is deleted.
-      </p>
+      <p className="mb-3 text-xs text-[var(--color-text-tertiary)]">{hint}</p>
 
       <div className="space-y-1">
         {visible.map((section) => (
           <CustomizeRow
             key={section.id}
             section={section}
+            labels={labels}
             dragOver={dragOverId === section.id}
             saving={saving}
             onDragStart={() => {
@@ -78,6 +94,7 @@ export function OverviewCustomize({ layout, onChange, onReset, saving }: Props) 
               <CustomizeRow
                 key={section.id}
                 section={section}
+                labels={labels}
                 muted
                 saving={saving}
                 onToggle={() => setVisible(section.id, true)}
@@ -104,6 +121,7 @@ export function OverviewCustomize({ layout, onChange, onReset, saving }: Props) 
 
 function CustomizeRow({
   section,
+  labels,
   muted,
   dragOver,
   saving,
@@ -117,7 +135,8 @@ function CustomizeRow({
   toggleLabel,
   toggleIcon,
 }: {
-  section: OverviewSectionConfig;
+  section: LayoutSectionConfig;
+  labels: Record<string, string>;
   muted?: boolean;
   dragOver?: boolean;
   saving?: boolean;
@@ -155,7 +174,7 @@ function CustomizeRow({
         <span className="w-3.5 shrink-0" />
       )}
       <span className="min-w-0 flex-1 text-sm text-[var(--color-text)]">
-        {OVERVIEW_SECTION_LABELS[section.id]}
+        {labels[section.id] ?? section.id}
       </span>
       <button
         type="button"

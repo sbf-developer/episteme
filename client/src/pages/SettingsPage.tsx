@@ -12,9 +12,13 @@ import {
   User,
   Check,
   FileType,
+  PanelLeft,
 } from "lucide-react";
 import { api, type ExportSection, type ExportPreview } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
+import { OverviewCustomize } from "@/components/OverviewCustomize";
+import { useSidebarNav } from "@/context/SidebarNavContext";
+import { SIDEBAR_NAV_LABELS } from "@/lib/sidebar-nav";
 
 const SECTION_META: {
   id: ExportSection;
@@ -25,7 +29,7 @@ const SECTION_META: {
   {
     id: "profile",
     label: "Profile & preferences",
-    description: "Name, email, AI instructions, home layout",
+    description: "Name, email, AI instructions, home and sidebar layout",
     icon: User,
   },
   {
@@ -88,6 +92,13 @@ function countLabel(count: number, section: ExportSection) {
 }
 
 export function SettingsPage() {
+  const {
+    layout: sidebarLayout,
+    saving: savingSidebar,
+    error: sidebarError,
+    updateLayout: updateSidebarLayout,
+    resetLayout: resetSidebarLayout,
+  } = useSidebarNav();
   const [preview, setPreview] = useState<ExportPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(true);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -168,6 +179,34 @@ export function SettingsPage() {
           Manage your account and data.
         </p>
       </header>
+
+      <section className="mb-6 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)]">
+        <div className="border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-border-subtle)] text-[var(--color-text-secondary)]">
+              <PanelLeft size={18} strokeWidth={1.75} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-medium text-[var(--color-text)]">Sidebar menu</h2>
+              <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                Reorder and show or hide items in the left navigation. Settings always stays at the
+                bottom.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="px-5 py-4 sm:px-6">
+          {sidebarError && <p className="mb-3 text-sm text-red-600">{sidebarError}</p>}
+          <OverviewCustomize
+            layout={sidebarLayout}
+            labels={SIDEBAR_NAV_LABELS}
+            onChange={updateSidebarLayout}
+            onReset={resetSidebarLayout}
+            saving={savingSidebar}
+            hint="Drag to reorder. Hide pages you don't use — Settings is always available."
+          />
+        </div>
+      </section>
 
       <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)]">
         <div className="border-b border-[var(--color-border)] px-5 py-4 sm:px-6">

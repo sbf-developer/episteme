@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ChevronRight, SlidersHorizontal } from "lucide-react";
 import { api, type Goal, type Document, type CalendarEvent, type Kpi, type DoItem } from "@/lib/api";
 import type { OverviewLayout, OverviewSectionId } from "@/lib/overview";
+import { OVERVIEW_SECTION_LABELS } from "@/lib/overview";
 import { OverviewCustomize } from "@/components/OverviewCustomize";
 
 function formatEventDate(iso: string, allDay: boolean) {
@@ -174,6 +175,7 @@ export function HomePage() {
           )}
           <OverviewCustomize
             layout={layout}
+            labels={OVERVIEW_SECTION_LABELS}
             onChange={persistLayout}
             onReset={() => persistLayout(DEFAULT_LAYOUT)}
             saving={savingLayout}

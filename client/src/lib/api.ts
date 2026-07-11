@@ -1,6 +1,7 @@
 const API_BASE = "/api";
 
 import type { OverviewLayout } from "./overview";
+import type { SidebarLayout } from "./sidebar-nav";
 import type { UserLocalContext } from "./local-time";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -175,6 +176,12 @@ export const api = {
     getOverview: () => request<OverviewLayout>("/settings/overview"),
     updateOverview: (layout: OverviewLayout) =>
       request<OverviewLayout>("/settings/overview", {
+        method: "PATCH",
+        body: JSON.stringify(layout),
+      }),
+    getSidebar: () => request<SidebarLayout>("/settings/sidebar"),
+    updateSidebar: (layout: SidebarLayout) =>
+      request<SidebarLayout>("/settings/sidebar", {
         method: "PATCH",
         body: JSON.stringify(layout),
       }),

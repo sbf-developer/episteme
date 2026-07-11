@@ -13,6 +13,7 @@ model User {
   name      String?
   image     String?
   overviewLayout Json?
+  sidebarLayout Json?
   aiInstructions String   @default("Give me short, direct answers.")
   onboardingCompletedAt DateTime?
   createdAt DateTime @default(now())
