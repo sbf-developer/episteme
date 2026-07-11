@@ -120,8 +120,8 @@ export function CalendarPage() {
             Schedule events and see what's coming up.
           </p>
         </div>
-        <Button variant="primary" className="w-full sm:w-auto" onClick={() => setShowForm(true)}>
-          <Plus size={16} />
+        <Button variant="subtle" className="w-full sm:w-auto" onClick={() => setShowForm(true)}>
+          <Plus size={15} strokeWidth={2} />
           New event
         </Button>
       </div>

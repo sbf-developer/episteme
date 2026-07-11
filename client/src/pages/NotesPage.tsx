@@ -41,8 +41,8 @@ export function NotesPage() {
             Capture thoughts, outlines, and plans.
           </p>
         </div>
-        <Button variant="primary" className="w-full sm:w-auto" onClick={create}>
-          <Plus size={16} />
+        <Button variant="subtle" className="w-full sm:w-auto" onClick={create}>
+          <Plus size={15} strokeWidth={2} />
           New note
         </Button>
       </div>
@@ -52,7 +52,7 @@ export function NotesPage() {
           <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] py-16 text-center">
             <FileText size={32} className="mx-auto text-[var(--color-text-tertiary)]" />
             <p className="mt-3 text-sm text-[var(--color-text-secondary)]">No notes yet</p>
-            <Button variant="primary" className="mt-4" onClick={create}>
+            <Button variant="subtle" className="mt-4" onClick={create}>
               Create your first note
             </Button>
           </div>

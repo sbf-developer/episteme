@@ -66,8 +66,8 @@ export function ActionsPage() {
           placeholder="Add an action…"
           className="flex-1"
         />
-        <Button variant="primary" onClick={create}>
-          <Plus size={16} />
+        <Button variant="subtle" onClick={create}>
+          <Plus size={15} strokeWidth={2} />
           Add
         </Button>
       </div>
@@ -127,44 +127,52 @@ function ActionList({
       <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)]">
         {title}
       </h3>
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {actions.map((action) => (
           <div
             key={action.id}
-            className="flex flex-wrap items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2.5 sm:gap-3 sm:px-4"
+            className="flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-3 sm:px-4"
           >
             <button
+              type="button"
               onClick={() => onCycle(action)}
-              className="text-lg leading-none text-[var(--color-text-secondary)] hover:text-[var(--color-accent)]"
+              className="mt-0.5 shrink-0 text-lg leading-none text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-accent)]"
               title="Cycle status"
             >
               {statusIcons[action.status]}
             </button>
-            <span
-              className={`min-w-0 flex-1 basis-full text-sm sm:basis-auto ${action.status === "DONE" ? "line-through text-[var(--color-text-tertiary)]" : "font-medium"}`}
-            >
-              {action.title}
-            </span>
-            <select
-              value={action.goalId ?? ""}
-              onChange={async (e) => {
-                await api.actions.update(action.id, {
-                  goalId: e.target.value || null,
-                });
-                onUpdate();
-              }}
-              className="max-w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent px-2 py-1 text-xs text-[var(--color-text-tertiary)] sm:max-w-[10rem]"
-            >
-              <option value="">No goal</option>
-              {goals.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.title}
-                </option>
-              ))}
-            </select>
+            <div className="min-w-0 flex-1 space-y-2">
+              <p
+                className={`text-sm leading-snug ${
+                  action.status === "DONE"
+                    ? "text-[var(--color-text-tertiary)] line-through"
+                    : "font-medium text-[var(--color-text)]"
+                }`}
+              >
+                {action.title}
+              </p>
+              <select
+                value={action.goalId ?? ""}
+                onChange={async (e) => {
+                  await api.actions.update(action.id, {
+                    goalId: e.target.value || null,
+                  });
+                  onUpdate();
+                }}
+                className="w-full max-w-xs rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent px-2 py-1 text-xs text-[var(--color-text-secondary)]"
+              >
+                <option value="">No goal</option>
+                {goals.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.title}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
+              type="button"
               onClick={() => onRemove(action.id)}
-              className="text-xs text-[var(--color-text-tertiary)] hover:text-red-600"
+              className="shrink-0 pt-0.5 text-xs text-[var(--color-text-tertiary)] transition-colors hover:text-red-600"
             >
               Delete
             </button>

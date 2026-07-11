@@ -51,8 +51,8 @@ export function DoListPage() {
           placeholder="Add to do…"
           className="flex-1"
         />
-        <Button variant="primary" onClick={create}>
-          <Plus size={16} />
+        <Button variant="subtle" onClick={create}>
+          <Plus size={15} strokeWidth={2} />
           Add
         </Button>
       </div>
@@ -92,17 +92,17 @@ function ItemSection({
       <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)]">
         {title}
       </h3>
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {items.map((item) => (
           <div
             key={item.id}
-            className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-2.5 sm:px-4"
+            className="flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-3 sm:px-4"
           >
             <button
               type="button"
               onClick={() => onToggle(item)}
               aria-label={item.done ? "Mark as not done" : "Mark as done"}
-              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
                 item.done
                   ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
                   : "border-[var(--color-border)] hover:border-[var(--color-accent)]"
@@ -110,22 +110,26 @@ function ItemSection({
             >
               {item.done && <Check size={12} strokeWidth={3} />}
             </button>
-            <span
-              className={`min-w-0 flex-1 text-sm ${
-                item.done ? "text-[var(--color-text-tertiary)] line-through" : "font-medium"
-              }`}
-            >
-              {item.title}
-            </span>
-            {item.dueDate && (
-              <span className="shrink-0 text-xs text-[var(--color-text-tertiary)]">
-                {new Date(item.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-              </span>
-            )}
+            <div className="min-w-0 flex-1">
+              <p
+                className={`text-sm leading-snug ${
+                  item.done
+                    ? "text-[var(--color-text-tertiary)] line-through"
+                    : "font-medium text-[var(--color-text)]"
+                }`}
+              >
+                {item.title}
+              </p>
+              {item.dueDate && (
+                <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                  Due {new Date(item.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </p>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => onRemove(item.id)}
-              className="shrink-0 text-xs text-[var(--color-text-tertiary)] hover:text-red-600"
+              className="shrink-0 pt-0.5 text-xs text-[var(--color-text-tertiary)] transition-colors hover:text-red-600"
             >
               Delete
             </button>

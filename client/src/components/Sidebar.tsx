@@ -6,7 +6,7 @@ import {
   Target,
   CheckSquare,
   GitBranch,
-  Sparkles,
+  MessageSquare,
   LogOut,
   Calendar,
   FolderUp,
@@ -30,7 +30,7 @@ const nav = [
   { to: "/do-list", icon: ListTodo, label: "Do-list" },
   { to: "/actions", icon: CheckSquare, label: "Actions" },
   { to: "/graph", icon: GitBranch, label: "Graph" },
-  { to: "/ai", icon: Sparkles, label: "AI" },
+  { to: "/ai", icon: MessageSquare, label: "AI" },
 ];
 
 export function Sidebar() {

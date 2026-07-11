@@ -57,8 +57,8 @@ export function GoalsPage() {
           placeholder="Add a new goal…"
           className="flex-1"
         />
-        <Button variant="primary" onClick={create}>
-          <Plus size={16} />
+        <Button variant="subtle" onClick={create}>
+          <Plus size={15} strokeWidth={2} />
           Add
         </Button>
       </div>

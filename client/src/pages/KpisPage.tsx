@@ -64,8 +64,8 @@ export function KpisPage() {
           type="number"
           className="w-full sm:w-28"
         />
-        <Button variant="primary" onClick={create}>
-          <Plus size={16} />
+        <Button variant="subtle" onClick={create}>
+          <Plus size={15} strokeWidth={2} />
           Add
         </Button>
       </div>
