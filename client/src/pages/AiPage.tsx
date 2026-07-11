@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Search, Send, Trash2, X, PanelLeft, SlidersHorizontal } from "lucide-react";
 import { api, type AiMessage, type AiThreadListItem } from "@/lib/api";
+import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 const NARROW_QUERY = "(max-width: 1023px)";
@@ -453,7 +454,13 @@ export function AiPage() {
                         : "px-1 py-0.5 text-[var(--color-text)]"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    {msg.role === "USER" ? (
+                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    ) : (
+                      <div className="break-words">
+                        <ChatMarkdown content={msg.content} />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
