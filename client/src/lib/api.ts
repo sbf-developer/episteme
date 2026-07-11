@@ -111,6 +111,7 @@ export const api = {
   files: {
     list: () => request<FileUpload[]>("/files"),
     get: (id: string) => request<FileUpload>(`/files/${id}`),
+    contentUrl: (id: string) => `${API_BASE}/files/${id}/content`,
     upload: (file: File) => {
       const form = new FormData();
       form.append("file", file);

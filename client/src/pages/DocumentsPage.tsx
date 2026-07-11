@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Upload, File, Trash2, FolderOpen } from "lucide-react";
+import { Upload, File, Trash2, FolderOpen, ImageIcon, FileText } from "lucide-react";
 import { api, type FileUpload } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 
@@ -7,6 +7,67 @@ function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+type FileKind = "image" | "pdf" | "docx" | "text";
+
+function getFileKind(file: FileUpload): FileKind {
+  if (file.mimeType.startsWith("image/")) return "image";
+  if (file.mimeType === "application/pdf" || file.filename.toLowerCase().endsWith(".pdf")) {
+    return "pdf";
+  }
+  if (
+    file.mimeType ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    file.filename.toLowerCase().endsWith(".docx")
+  ) {
+    return "docx";
+  }
+  return "text";
+}
+
+function FileTypeIcon({ file }: { file: FileUpload }) {
+  const kind = getFileKind(file);
+  if (kind === "image") {
+    return <ImageIcon size={15} className="shrink-0 text-[var(--color-text-tertiary)]" />;
+  }
+  if (kind === "pdf" || kind === "docx") {
+    return <FileText size={15} className="shrink-0 text-[var(--color-text-tertiary)]" />;
+  }
+  return <File size={15} className="shrink-0 text-[var(--color-text-tertiary)]" />;
+}
+
+function FilePreview({ file }: { file: FileUpload }) {
+  const kind = getFileKind(file);
+  const contentUrl = api.files.contentUrl(file.id);
+
+  if (kind === "image") {
+    return (
+      <div className="flex flex-1 items-center justify-center overflow-auto bg-[var(--color-border-subtle)] p-4">
+        <img
+          src={contentUrl}
+          alt={file.filename}
+          className="max-h-full max-w-full rounded-[var(--radius-sm)] object-contain shadow-sm"
+        />
+      </div>
+    );
+  }
+
+  if (kind === "pdf") {
+    return (
+      <iframe
+        src={contentUrl}
+        title={file.filename}
+        className="min-h-[480px] flex-1 border-0 bg-white"
+      />
+    );
+  }
+
+  return (
+    <pre className="flex-1 overflow-auto whitespace-pre-wrap p-4 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+      {file.extractedText || "No extractable text content."}
+    </pre>
+  );
 }
 
 export function DocumentsPage() {
@@ -51,7 +112,7 @@ export function DocumentsPage() {
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Documents</h2>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Upload files for AI context — notes, plans, exports, and reference material.
+          Upload files for AI context — notes, images, PDFs, Word docs, and reference material.
         </p>
       </div>
 
@@ -71,7 +132,7 @@ export function DocumentsPage() {
           {uploading ? "Uploading…" : "Drop files here or click to upload"}
         </p>
         <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
-          .txt, .md, .json, .csv, .html, .xml, .yml
+          Text, images, PDF, Word (.docx) · max 25 MB
         </p>
         {uploadError && (
           <p className="mt-2 text-xs text-red-600">{uploadError}</p>
@@ -80,7 +141,7 @@ export function DocumentsPage() {
           ref={inputRef}
           type="file"
           multiple
-          accept=".txt,.md,.markdown,.json,.csv,.html,.xml,.yml,.yaml,.log,text/*"
+          accept=".txt,.md,.markdown,.json,.csv,.html,.xml,.yml,.yaml,.log,.pdf,.docx,text/*,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           className="hidden"
           onChange={(e) => upload(e.target.files)}
         />
@@ -104,7 +165,7 @@ export function DocumentsPage() {
                     : "border-[var(--color-border)] bg-[var(--color-surface-elevated)] hover:border-[var(--color-accent)]"
                 }`}
               >
-                <File size={15} className="shrink-0 text-[var(--color-text-tertiary)]" />
+                <FileTypeIcon file={f} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{f.filename}</p>
                   <p className="text-xs text-[var(--color-text-tertiary)]">{formatSize(f.size)}</p>
@@ -128,9 +189,7 @@ export function DocumentsPage() {
                   <Trash2 size={15} />
                 </Button>
               </div>
-              <pre className="flex-1 overflow-auto whitespace-pre-wrap p-4 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                {selected.extractedText || "No extractable text content."}
-              </pre>
+              <FilePreview file={selected} />
             </div>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-tertiary)]">

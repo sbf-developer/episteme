@@ -5,6 +5,9 @@ import {
   deleteStoredFile,
   extractText,
   isAllowedFile,
+  MAX_UPLOAD_BYTES,
+  readStoredFile,
+  resolveMimeType,
   saveUploadedFile,
 } from "../lib/files.js";
 
@@ -30,6 +33,29 @@ fileRoutes.get("/", async (c) => {
     },
   });
   return c.json(files);
+});
+
+fileRoutes.get("/:id/content", async (c) => {
+  const userId = c.get("userId");
+  const existing = await prisma.fileUpload.findFirst({
+    where: { id: c.req.param("id"), userId },
+  });
+  if (!existing) return c.json({ error: "Not found" }, 404);
+
+  try {
+    const buffer = await readStoredFile(existing.storagePath);
+    const mimeType = resolveMimeType(existing.filename, existing.mimeType);
+    return new Response(new Uint8Array(buffer), {
+      headers: {
+        "Content-Type": mimeType,
+        "Content-Length": String(buffer.length),
+        "Content-Disposition": `inline; filename="${existing.filename.replace(/"/g, "")}"`,
+        "Cache-Control": "private, max-age=3600",
+      },
+    });
+  } catch {
+    return c.json({ error: "File not found on disk" }, 404);
+  }
 });
 
 fileRoutes.get("/:id", async (c) => {
@@ -61,12 +87,15 @@ fileRoutes.post("/", async (c) => {
 
   const blob = file as File;
   const filename = "name" in blob && blob.name ? blob.name : "upload.txt";
-  const mimeType = blob.type || "text/plain";
+  const mimeType = resolveMimeType(filename, blob.type || "");
   const buffer = Buffer.from(await blob.arrayBuffer());
+  if (buffer.length > MAX_UPLOAD_BYTES) {
+    return c.json({ error: "File too large. Maximum size is 25 MB." }, 400);
+  }
   const check = isAllowedFile(filename, mimeType);
   if (!check.ok) return c.json({ error: check.error }, 400);
 
-  const extractedText = await extractText(buffer);
+  const extractedText = await extractText(buffer, filename, mimeType);
 
   const record = await prisma.fileUpload.create({
     data: {
