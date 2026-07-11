@@ -3,6 +3,8 @@ import { Plus, CheckSquare } from "lucide-react";
 import { api, type Action, type Goal } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ReorderGrip, reorderRowClass } from "@/components/ReorderGrip";
+import { useDragReorder } from "@/hooks/useDragReorder";
 
 const statusIcons: Record<Action["status"], string> = {
   TODO: "○",
@@ -46,6 +48,11 @@ export function ActionsPage() {
     load();
   };
 
+  const reorder = async (ids: string[], section: "active" | "done") => {
+    await api.actions.reorder(ids, section);
+    await load();
+  };
+
   const active = actions.filter((a) => a.status !== "DONE");
   const done = actions.filter((a) => a.status === "DONE");
 
@@ -54,7 +61,7 @@ export function ActionsPage() {
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Actions</h2>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Concrete steps toward your goals.
+          Concrete steps toward your goals. Drag to set your priority order.
         </p>
       </div>
 
@@ -79,6 +86,7 @@ export function ActionsPage() {
         onCycle={cycleStatus}
         onRemove={remove}
         onUpdate={load}
+        onReorder={(ids) => reorder(ids, "active")}
       />
 
       {done.length > 0 && (
@@ -89,6 +97,7 @@ export function ActionsPage() {
           onCycle={cycleStatus}
           onRemove={remove}
           onUpdate={load}
+          onReorder={(ids) => reorder(ids, "done")}
           muted
         />
       )}
@@ -110,6 +119,7 @@ function ActionList({
   onCycle,
   onRemove,
   onUpdate,
+  onReorder,
   muted,
 }: {
   title: string;
@@ -118,8 +128,11 @@ function ActionList({
   onCycle: (a: Action) => void;
   onRemove: (id: string) => void;
   onUpdate: () => void;
+  onReorder: (ids: string[]) => void | Promise<void>;
   muted?: boolean;
 }) {
+  const { displayItems, rowProps } = useDragReorder(actions, onReorder);
+
   if (actions.length === 0) return null;
 
   return (
@@ -128,56 +141,61 @@ function ActionList({
         {title}
       </h3>
       <div className="space-y-1.5">
-        {actions.map((action) => (
-          <div
-            key={action.id}
-            className="flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-3 sm:px-4"
-          >
-            <button
-              type="button"
-              onClick={() => onCycle(action)}
-              className="mt-0.5 shrink-0 text-lg leading-none text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-accent)]"
-              title="Cycle status"
+        {displayItems.map((action) => {
+          const drag = rowProps(action.id);
+          return (
+            <div
+              key={action.id}
+              {...drag}
+              className={`flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-3 transition-colors sm:gap-3 sm:px-4 ${reorderRowClass(drag["data-drag-over"])}`}
             >
-              {statusIcons[action.status]}
-            </button>
-            <div className="min-w-0 flex-1 space-y-2">
-              <p
-                className={`text-sm leading-snug ${
-                  action.status === "DONE"
-                    ? "text-[var(--color-text-tertiary)] line-through"
-                    : "font-medium text-[var(--color-text)]"
-                }`}
+              <ReorderGrip />
+              <button
+                type="button"
+                onClick={() => onCycle(action)}
+                className="mt-0.5 shrink-0 text-lg leading-none text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-accent)]"
+                title="Cycle status"
               >
-                {action.title}
-              </p>
-              <select
-                value={action.goalId ?? ""}
-                onChange={async (e) => {
-                  await api.actions.update(action.id, {
-                    goalId: e.target.value || null,
-                  });
-                  onUpdate();
-                }}
-                className="w-full max-w-xs rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent px-2 py-1 text-xs text-[var(--color-text-secondary)]"
+                {statusIcons[action.status]}
+              </button>
+              <div className="min-w-0 flex-1 space-y-2">
+                <p
+                  className={`text-sm leading-snug ${
+                    action.status === "DONE"
+                      ? "text-[var(--color-text-tertiary)] line-through"
+                      : "font-medium text-[var(--color-text)]"
+                  }`}
+                >
+                  {action.title}
+                </p>
+                <select
+                  value={action.goalId ?? ""}
+                  onChange={async (e) => {
+                    await api.actions.update(action.id, {
+                      goalId: e.target.value || null,
+                    });
+                    onUpdate();
+                  }}
+                  className="w-full max-w-xs rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent px-2 py-1 text-xs text-[var(--color-text-secondary)]"
+                >
+                  <option value="">No goal</option>
+                  {goals.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={() => onRemove(action.id)}
+                className="shrink-0 pt-0.5 text-xs text-[var(--color-text-tertiary)] transition-colors hover:text-red-600"
               >
-                <option value="">No goal</option>
-                {goals.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.title}
-                  </option>
-                ))}
-              </select>
+                Delete
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => onRemove(action.id)}
-              className="shrink-0 pt-0.5 text-xs text-[var(--color-text-tertiary)] transition-colors hover:text-red-600"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

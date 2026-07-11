@@ -269,7 +269,7 @@ export async function fetchUserContext(userId: string): Promise<UserContext> {
           targetDate: true,
           parentId: true,
         },
-        orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
+        orderBy: [{ position: "asc" }, { updatedAt: "desc" }],
         take: ENTITY_LIMITS.goals,
       }),
       prisma.action.findMany({

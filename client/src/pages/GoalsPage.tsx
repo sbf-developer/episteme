@@ -3,6 +3,8 @@ import { Plus, Target } from "lucide-react";
 import { api, type Goal } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ReorderGrip, reorderRowClass } from "@/components/ReorderGrip";
+import { useDragReorder } from "@/hooks/useDragReorder";
 
 const statusColors: Record<Goal["status"], string> = {
   ACTIVE: "bg-blue-50 text-blue-700",
@@ -40,12 +42,19 @@ export function GoalsPage() {
     load();
   };
 
+  const reorder = async (ids: string[]) => {
+    await api.goals.reorder(ids);
+    await load();
+  };
+
+  const { displayItems, rowProps } = useDragReorder(goals, reorder);
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Goals</h2>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Define what you're working toward.
+          Define what you're working toward. Drag to set your priority order.
         </p>
       </div>
 
@@ -70,57 +79,64 @@ export function GoalsPage() {
             <p className="mt-3 text-sm text-[var(--color-text-secondary)]">No goals yet</p>
           </div>
         ) : (
-          goals.map((goal) => (
-            <div
-              key={goal.id}
-              className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4"
-            >
-              {editing === goal.id ? (
-                <EditGoal goal={goal} onSave={(d) => update(goal.id, d)} onCancel={() => setEditing(null)} />
-              ) : (
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-medium">{goal.title}</h3>
-                      <span className={`rounded px-1.5 py-0.5 text-xs ${statusColors[goal.status]}`}>
-                        {goal.status}
-                      </span>
+          displayItems.map((goal) => {
+            const drag = rowProps(goal.id);
+            return (
+              <div
+                key={goal.id}
+                {...drag}
+                className={`rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 transition-colors ${reorderRowClass(drag["data-drag-over"])}`}
+              >
+                {editing === goal.id ? (
+                  <EditGoal goal={goal} onSave={(d) => update(goal.id, d)} onCancel={() => setEditing(null)} />
+                ) : (
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <ReorderGrip />
+                    <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-medium">{goal.title}</h3>
+                          <span className={`rounded px-1.5 py-0.5 text-xs ${statusColors[goal.status]}`}>
+                            {goal.status}
+                          </span>
+                        </div>
+                        {goal.description && (
+                          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                            {goal.description}
+                          </p>
+                        )}
+                        {goal.actions && goal.actions.length > 0 && (
+                          <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
+                            {goal.actions.length} action{goal.actions.length !== 1 ? "s" : ""}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 flex-wrap gap-1">
+                        <Button variant="ghost" onClick={() => setEditing(goal.id)}>
+                          Edit
+                        </Button>
+                        <select
+                          value={goal.status}
+                          onChange={(e) =>
+                            update(goal.id, { status: e.target.value as Goal["status"] })
+                          }
+                          className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent px-2 py-1 text-xs"
+                        >
+                          <option value="ACTIVE">Active</option>
+                          <option value="COMPLETED">Completed</option>
+                          <option value="PAUSED">Paused</option>
+                          <option value="ARCHIVED">Archived</option>
+                        </select>
+                        <Button variant="ghost" onClick={() => remove(goal.id)}>
+                          Delete
+                        </Button>
+                      </div>
                     </div>
-                    {goal.description && (
-                      <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                        {goal.description}
-                      </p>
-                    )}
-                    {goal.actions && goal.actions.length > 0 && (
-                      <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                        {goal.actions.length} action{goal.actions.length !== 1 ? "s" : ""}
-                      </p>
-                    )}
                   </div>
-                  <div className="flex shrink-0 flex-wrap gap-1">
-                    <Button variant="ghost" onClick={() => setEditing(goal.id)}>
-                      Edit
-                    </Button>
-                    <select
-                      value={goal.status}
-                      onChange={(e) =>
-                        update(goal.id, { status: e.target.value as Goal["status"] })
-                      }
-                      className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent px-2 py-1 text-xs"
-                    >
-                      <option value="ACTIVE">Active</option>
-                      <option value="COMPLETED">Completed</option>
-                      <option value="PAUSED">Paused</option>
-                      <option value="ARCHIVED">Archived</option>
-                    </select>
-                    <Button variant="ghost" onClick={() => remove(goal.id)}>
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))
+                )}
+              </div>
+            );
+          })
         )}
       </div>
     </div>

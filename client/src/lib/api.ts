@@ -49,6 +49,11 @@ export const api = {
       request<Goal>("/goals", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Goal>) =>
       request<Goal>(`/goals/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    reorder: (ids: string[]) =>
+      request<{ ok: boolean }>("/goals/reorder", {
+        method: "PUT",
+        body: JSON.stringify({ ids }),
+      }),
     delete: (id: string) =>
       request<{ ok: boolean }>(`/goals/${id}`, { method: "DELETE" }),
   },
@@ -59,6 +64,11 @@ export const api = {
       request<Action>("/actions", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Action>) =>
       request<Action>(`/actions/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    reorder: (ids: string[], section: "active" | "done") =>
+      request<{ ok: boolean }>("/actions/reorder", {
+        method: "PUT",
+        body: JSON.stringify({ ids, section }),
+      }),
     delete: (id: string) =>
       request<{ ok: boolean }>(`/actions/${id}`, { method: "DELETE" }),
   },
@@ -129,6 +139,11 @@ export const api = {
       request<Kpi>("/kpis", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Kpi>) =>
       request<Kpi>(`/kpis/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    reorder: (ids: string[]) =>
+      request<{ ok: boolean }>("/kpis/reorder", {
+        method: "PUT",
+        body: JSON.stringify({ ids }),
+      }),
     delete: (id: string) =>
       request<{ ok: boolean }>(`/kpis/${id}`, { method: "DELETE" }),
   },
@@ -140,6 +155,11 @@ export const api = {
       request<DoItem>("/do-list", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: Partial<DoItem>) =>
       request<DoItem>(`/do-list/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    reorder: (ids: string[], done: boolean) =>
+      request<{ ok: boolean }>("/do-list/reorder", {
+        method: "PUT",
+        body: JSON.stringify({ ids, done }),
+      }),
     delete: (id: string) =>
       request<{ ok: boolean }>(`/do-list/${id}`, { method: "DELETE" }),
   },
@@ -183,6 +203,7 @@ export type Goal = {
   description: string;
   status: "ACTIVE" | "COMPLETED" | "PAUSED" | "ARCHIVED";
   priority: number;
+  position: number;
   targetDate: string | null;
   parentId: string | null;
   actions?: Action[];
@@ -195,6 +216,7 @@ export type Action = {
   status: "TODO" | "IN_PROGRESS" | "DONE" | "BLOCKED";
   goalId: string | null;
   dueDate: string | null;
+  position: number;
   goal?: { id: string; title: string };
 };
 

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "./auth.js";
+import { reorderByIds } from "../lib/reorder.js";
 import { z } from "zod";
 
 type Variables = { userId: string };
@@ -30,6 +31,29 @@ doListRoutes.get("/", async (c) => {
   return c.json(items);
 });
 
+doListRoutes.put("/reorder", async (c) => {
+  const userId = c.get("userId");
+  const body = z
+    .object({
+      ids: z.array(z.string()).min(1),
+      done: z.boolean(),
+    })
+    .parse(await c.req.json());
+
+  const existing = await prisma.doItem.findMany({
+    where: { userId, done: body.done, id: { in: body.ids } },
+    select: { id: true },
+  });
+  if (existing.length !== body.ids.length) {
+    return c.json({ error: "Invalid item ids" }, 400);
+  }
+
+  await reorderByIds(body.ids, (id, position) =>
+    prisma.doItem.update({ where: { id }, data: { position } })
+  );
+  return c.json({ ok: true });
+});
+
 doListRoutes.get("/:id", async (c) => {
   const userId = c.get("userId");
   const item = await prisma.doItem.findFirst({
@@ -42,14 +66,19 @@ doListRoutes.get("/:id", async (c) => {
 doListRoutes.post("/", async (c) => {
   const userId = c.get("userId");
   const body = doItemSchema.parse(await c.req.json());
+  const done = body.done ?? false;
+  const max = await prisma.doItem.aggregate({
+    where: { userId, done },
+    _max: { position: true },
+  });
   const item = await prisma.doItem.create({
     data: {
       userId,
       title: body.title,
       description: body.description ?? "",
-      done: body.done ?? false,
+      done,
       dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-      position: body.position,
+      position: body.position ?? (max._max.position ?? -1) + 1,
     },
   });
   return c.json(item, 201);

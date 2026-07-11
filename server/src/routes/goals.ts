@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "./auth.js";
 import { validateGoalParent } from "../lib/ownership.js";
+import { reorderByIds } from "../lib/reorder.js";
 import { z } from "zod";
 
 type Variables = { userId: string };
@@ -11,6 +12,7 @@ const goalSchema = z.object({
   description: z.string().optional(),
   status: z.enum(["ACTIVE", "COMPLETED", "PAUSED", "ARCHIVED"]).optional(),
   priority: z.number().optional(),
+  position: z.number().optional(),
   targetDate: z.string().datetime().nullable().optional(),
   parentId: z.string().nullable().optional(),
 });
@@ -24,9 +26,27 @@ goalRoutes.get("/", async (c) => {
   const goals = await prisma.goal.findMany({
     where: { userId },
     include: { actions: { orderBy: { position: "asc" } } },
-    orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
+    orderBy: [{ position: "asc" }, { updatedAt: "desc" }],
   });
   return c.json(goals);
+});
+
+goalRoutes.put("/reorder", async (c) => {
+  const userId = c.get("userId");
+  const body = z.object({ ids: z.array(z.string()).min(1) }).parse(await c.req.json());
+
+  const existing = await prisma.goal.findMany({
+    where: { userId, id: { in: body.ids } },
+    select: { id: true },
+  });
+  if (existing.length !== body.ids.length) {
+    return c.json({ error: "Invalid goal ids" }, 400);
+  }
+
+  await reorderByIds(body.ids, (id, position) =>
+    prisma.goal.update({ where: { id }, data: { position } })
+  );
+  return c.json({ ok: true });
 });
 
 goalRoutes.get("/:id", async (c) => {
@@ -43,6 +63,10 @@ goalRoutes.post("/", async (c) => {
   const userId = c.get("userId");
   const body = goalSchema.parse(await c.req.json());
   await validateGoalParent(userId, body.parentId);
+  const max = await prisma.goal.aggregate({
+    where: { userId },
+    _max: { position: true },
+  });
   const goal = await prisma.goal.create({
     data: {
       userId,
@@ -52,6 +76,7 @@ goalRoutes.post("/", async (c) => {
       priority: body.priority,
       targetDate: body.targetDate ? new Date(body.targetDate) : undefined,
       parentId: body.parentId,
+      position: body.position ?? (max._max.position ?? -1) + 1,
     },
   });
   return c.json(goal, 201);

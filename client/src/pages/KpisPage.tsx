@@ -3,6 +3,8 @@ import { Plus, Gauge } from "lucide-react";
 import { api, type Kpi } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ReorderGrip, reorderRowClass } from "@/components/ReorderGrip";
+import { useDragReorder } from "@/hooks/useDragReorder";
 
 function progressPercent(kpi: Kpi) {
   if (kpi.targetValue === 0) return 0;
@@ -41,12 +43,19 @@ export function KpisPage() {
     load();
   };
 
+  const reorder = async (ids: string[]) => {
+    await api.kpis.reorder(ids);
+    await load();
+  };
+
+  const { displayItems, rowProps } = useDragReorder(kpis, reorder);
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
       <div>
         <h2 className="text-xl font-semibold tracking-tight">KPIs</h2>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Track the numbers that matter most.
+          Track the numbers that matter most. Drag to set your priority order.
         </p>
       </div>
 
@@ -77,15 +86,21 @@ export function KpisPage() {
             <p className="mt-3 text-sm text-[var(--color-text-secondary)]">No KPIs yet</p>
           </div>
         ) : (
-          kpis.map((kpi) => (
+          displayItems.map((kpi) => {
+            const drag = rowProps(kpi.id);
+            return (
             <div
               key={kpi.id}
-              className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4"
+              {...drag}
+              className={`rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] p-4 transition-colors ${reorderRowClass(drag["data-drag-over"])}`}
             >
               {editing === kpi.id ? (
                 <EditKpi kpi={kpi} onSave={(d) => update(kpi.id, d)} onCancel={() => setEditing(null)} />
               ) : (
                 <>
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <ReorderGrip />
+                    <div className="min-w-0 flex-1">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 flex-1">
                       <h3 className="font-medium">{kpi.title}</h3>
@@ -132,10 +147,13 @@ export function KpisPage() {
                     />
                     <span className="text-xs text-[var(--color-text-tertiary)]">Update current value, press Enter</span>
                   </div>
+                    </div>
+                  </div>
                 </>
               )}
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

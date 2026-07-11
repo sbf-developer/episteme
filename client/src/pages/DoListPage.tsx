@@ -3,6 +3,8 @@ import { Plus, ListTodo, Check } from "lucide-react";
 import { api, type DoItem } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ReorderGrip, reorderRowClass } from "@/components/ReorderGrip";
+import { useDragReorder } from "@/hooks/useDragReorder";
 
 export function DoListPage() {
   const [items, setItems] = useState<DoItem[]>([]);
@@ -32,6 +34,7 @@ export function DoListPage() {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, done: !done } : i)));
     try {
       await api.doList.update(id, { done: !done });
+      load();
     } catch {
       setItems((prev) => prev.map((i) => (i.id === id ? { ...i, done } : i)));
     }
@@ -43,6 +46,11 @@ export function DoListPage() {
     load();
   };
 
+  const reorder = async (ids: string[], done: boolean) => {
+    await api.doList.reorder(ids, done);
+    await load();
+  };
+
   const active = items.filter((i) => !i.done);
   const done = items.filter((i) => i.done);
 
@@ -51,7 +59,7 @@ export function DoListPage() {
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Do-list</h2>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Simple checklist for everyday todos.
+          Simple checklist for everyday todos. Drag to set your priority order.
         </p>
       </div>
 
@@ -71,9 +79,22 @@ export function DoListPage() {
 
       {!loading && (
         <>
-          <ItemSection title="To do" items={active} onToggle={toggle} onRemove={remove} />
+          <ItemSection
+            title="To do"
+            items={active}
+            onToggle={toggle}
+            onRemove={remove}
+            onReorder={(ids) => reorder(ids, false)}
+          />
           {done.length > 0 && (
-            <ItemSection title="Done" items={done} onToggle={toggle} onRemove={remove} muted />
+            <ItemSection
+              title="Done"
+              items={done}
+              onToggle={toggle}
+              onRemove={remove}
+              onReorder={(ids) => reorder(ids, true)}
+              muted
+            />
           )}
           {items.length === 0 && (
             <div className="mt-6 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] py-16 text-center">
@@ -98,14 +119,18 @@ function ItemSection({
   items,
   onToggle,
   onRemove,
+  onReorder,
   muted,
 }: {
   title: string;
   items: DoItem[];
   onToggle: (id: string, done: boolean) => void;
   onRemove: (id: string) => void;
+  onReorder: (ids: string[]) => void | Promise<void>;
   muted?: boolean;
 }) {
+  const { displayItems, rowProps } = useDragReorder(items, onReorder);
+
   if (items.length === 0) return null;
 
   return (
@@ -114,48 +139,53 @@ function ItemSection({
         {title}
       </h3>
       <div className="space-y-1.5">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-3 sm:px-4"
-          >
-            <button
-              type="button"
-              onClick={() => onToggle(item.id, item.done)}
-              aria-label={item.done ? "Mark as not done" : "Mark as done"}
-              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
-                item.done
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
-                  : "border-[var(--color-border)] hover:border-[var(--color-accent)]"
-              }`}
+        {displayItems.map((item) => {
+          const drag = rowProps(item.id);
+          return (
+            <div
+              key={item.id}
+              {...drag}
+              className={`flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-3 transition-colors sm:gap-3 sm:px-4 ${reorderRowClass(drag["data-drag-over"])}`}
             >
-              {item.done && <Check size={12} strokeWidth={3} />}
-            </button>
-            <div className="min-w-0 flex-1">
-              <p
-                className={`text-sm leading-snug ${
+              <ReorderGrip />
+              <button
+                type="button"
+                onClick={() => onToggle(item.id, item.done)}
+                aria-label={item.done ? "Mark as not done" : "Mark as done"}
+                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
                   item.done
-                    ? "text-[var(--color-text-tertiary)] line-through"
-                    : "font-medium text-[var(--color-text)]"
+                    ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
+                    : "border-[var(--color-border)] hover:border-[var(--color-accent)]"
                 }`}
               >
-                {item.title}
-              </p>
-              {item.dueDate && (
-                <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
-                  Due {new Date(item.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                {item.done && <Check size={12} strokeWidth={3} />}
+              </button>
+              <div className="min-w-0 flex-1">
+                <p
+                  className={`text-sm leading-snug ${
+                    item.done
+                      ? "text-[var(--color-text-tertiary)] line-through"
+                      : "font-medium text-[var(--color-text)]"
+                  }`}
+                >
+                  {item.title}
                 </p>
-              )}
+                {item.dueDate && (
+                  <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
+                    Due {new Date(item.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => onRemove(item.id)}
+                className="shrink-0 pt-0.5 text-xs text-[var(--color-text-tertiary)] transition-colors hover:text-red-600"
+              >
+                Delete
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => onRemove(item.id)}
-              className="shrink-0 pt-0.5 text-xs text-[var(--color-text-tertiary)] transition-colors hover:text-red-600"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

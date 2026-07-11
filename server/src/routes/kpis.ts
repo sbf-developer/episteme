@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "./auth.js";
 import { validateGoalRef } from "../lib/ownership.js";
+import { reorderByIds } from "../lib/reorder.js";
 import { z } from "zod";
 
 type Variables = { userId: string };
@@ -29,6 +30,24 @@ kpiRoutes.get("/", async (c) => {
   return c.json(kpis);
 });
 
+kpiRoutes.put("/reorder", async (c) => {
+  const userId = c.get("userId");
+  const body = z.object({ ids: z.array(z.string()).min(1) }).parse(await c.req.json());
+
+  const existing = await prisma.kpi.findMany({
+    where: { userId, id: { in: body.ids } },
+    select: { id: true },
+  });
+  if (existing.length !== body.ids.length) {
+    return c.json({ error: "Invalid kpi ids" }, 400);
+  }
+
+  await reorderByIds(body.ids, (id, position) =>
+    prisma.kpi.update({ where: { id }, data: { position } })
+  );
+  return c.json({ ok: true });
+});
+
 kpiRoutes.get("/:id", async (c) => {
   const userId = c.get("userId");
   const kpi = await prisma.kpi.findFirst({
@@ -42,6 +61,10 @@ kpiRoutes.post("/", async (c) => {
   const userId = c.get("userId");
   const body = kpiSchema.parse(await c.req.json());
   await validateGoalRef(userId, body.goalId);
+  const max = await prisma.kpi.aggregate({
+    where: { userId },
+    _max: { position: true },
+  });
   const kpi = await prisma.kpi.create({
     data: {
       userId,
@@ -51,7 +74,7 @@ kpiRoutes.post("/", async (c) => {
       targetValue: body.targetValue,
       unit: body.unit ?? "",
       goalId: body.goalId,
-      position: body.position,
+      position: body.position ?? (max._max.position ?? -1) + 1,
     },
   });
   return c.json(kpi, 201);
