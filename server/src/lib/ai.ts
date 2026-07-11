@@ -36,6 +36,26 @@ export type UserContext = {
   fileUploads: Pick<FileUpload, "id" | "filename" | "extractedText" | "mimeType">[];
 };
 
+export type UserLocalContext = {
+  timeZone: string;
+  localDateTime: string;
+};
+
+export function parseUserLocalContext(
+  timeZone?: string,
+  localDateTime?: string
+): UserLocalContext | undefined {
+  const tz = timeZone?.trim();
+  const when = localDateTime?.trim();
+  if (!tz || !when) return undefined;
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: tz });
+  } catch {
+    return undefined;
+  }
+  return { timeZone: tz.slice(0, 64), localDateTime: when.slice(0, 120) };
+}
+
 const ENTITY_LIMITS = {
   goals: 60,
   actions: 80,
@@ -56,12 +76,27 @@ function formatProgress(current: number, target: number, unit: string) {
   return `${current}${unitSuffix} / ${target}${unitSuffix} (${pct}%)`;
 }
 
-function formatDate(iso: Date) {
-  return iso.toISOString().slice(0, 10);
+function formatDate(iso: Date, timeZone?: string) {
+  if (!timeZone) return iso.toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(iso);
 }
 
-function formatDateTime(iso: Date) {
-  return iso.toISOString().slice(0, 16);
+function formatDateTime(iso: Date, timeZone?: string) {
+  if (!timeZone) return iso.toISOString().slice(0, 16);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(iso);
 }
 
 function truncate(text: string, max: number) {
@@ -93,7 +128,12 @@ function resolveEntityLabel(
   return entityLabels.get(`${type}:${id}`) ?? `${type} (${id.slice(0, 8)}…)`;
 }
 
-export function buildSystemPrompt(ctx: UserContext, aiInstructions?: string): string {
+export function buildSystemPrompt(
+  ctx: UserContext,
+  aiInstructions?: string,
+  localContext?: UserLocalContext
+): string {
+  const tz = localContext?.timeZone;
   const { goals: goalTitles, actions: actionTitles, entityLabels } = buildTitleMaps(ctx);
 
   const goalsText =
@@ -105,7 +145,7 @@ export function buildSystemPrompt(ctx: UserContext, aiInstructions?: string): st
               `[${g.status}] ${g.title}`,
               g.description ? `: ${g.description}` : "",
               g.priority > 0 ? ` (priority: ${g.priority})` : "",
-              g.targetDate ? ` (target: ${formatDate(g.targetDate)})` : "",
+              g.targetDate ? ` (target: ${formatDate(g.targetDate, tz)})` : "",
               parent ? ` (under: ${parent})` : "",
             ];
             return `- ${parts.join("")}`;
@@ -122,7 +162,7 @@ export function buildSystemPrompt(ctx: UserContext, aiInstructions?: string): st
               `[${a.status}] ${a.title}`,
               a.description ? `: ${a.description}` : "",
               goal ? ` (goal: ${goal})` : "",
-              a.dueDate ? ` (due: ${formatDate(a.dueDate)})` : "",
+              a.dueDate ? ` (due: ${formatDate(a.dueDate, tz)})` : "",
             ];
             return `- ${parts.join("")}`;
           })
@@ -144,7 +184,7 @@ export function buildSystemPrompt(ctx: UserContext, aiInstructions?: string): st
       ? ctx.doItems
           .map(
             (d) =>
-              `- [${d.done ? "done" : "todo"}] ${d.title}${d.description ? `: ${d.description}` : ""}${d.dueDate ? ` (due: ${formatDate(d.dueDate)})` : ""}`
+              `- [${d.done ? "done" : "todo"}] ${d.title}${d.description ? `: ${d.description}` : ""}${d.dueDate ? ` (due: ${formatDate(d.dueDate, tz)})` : ""}`
           )
           .join("\n")
       : "Do-list is empty.";
@@ -166,8 +206,8 @@ export function buildSystemPrompt(ctx: UserContext, aiInstructions?: string): st
             const goal = e.goalId ? goalTitles.get(e.goalId) : null;
             const action = e.actionId ? actionTitles.get(e.actionId) : null;
             const when = e.allDay
-              ? formatDate(e.startAt)
-              : `${formatDateTime(e.startAt)}${e.endAt ? ` → ${formatDateTime(e.endAt)}` : ""}`;
+              ? formatDate(e.startAt, tz)
+              : `${formatDateTime(e.startAt, tz)}${e.endAt ? ` → ${formatDateTime(e.endAt, tz)}` : ""}`;
             const links = [
               goal ? `goal: ${goal}` : null,
               action ? `action: ${action}` : null,
@@ -200,6 +240,16 @@ export function buildSystemPrompt(ctx: UserContext, aiInstructions?: string): st
           .join("\n")
       : "No connections yet.";
 
+  const localTimeText = localContext
+    ? `
+
+## User local time
+- Time zone: ${localContext.timeZone}
+- Local date and time now: ${localContext.localDateTime}
+
+Treat this as the user's current "now" when interpreting today, this week, upcoming deadlines, and calendar events. Dates and times in the workspace context below are shown in this time zone when available.`
+    : "";
+
   const personalInstructions =
     aiInstructions?.trim()
       ? `
@@ -211,7 +261,7 @@ ${aiInstructions.trim()}`
 
   return `You are the Dasein assistant helping ${ctx.user.name ?? ctx.user.email} plan, reflect, and stay on track.
 
-You have read-only access to their full workspace:
+You have read-only access to their full workspace:${localTimeText}
 
 ## Goals
 ${goalsText}

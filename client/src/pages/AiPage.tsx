@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Search, Send, Trash2, X, PanelLeft, PanelLeftClose, SlidersHorizontal, Pencil, Copy, Check } from "lucide-react";
+import { getUserLocalContext } from "@/lib/local-time";
 import { api, type AiMessage, type AiThreadListItem } from "@/lib/api";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -308,7 +309,11 @@ export function AiPage() {
     setSending(true);
 
     try {
-      const { threadId: tid, userMessage, message } = await api.ai.chat(userMsg, threadAtSend);
+      const { threadId: tid, userMessage, message } = await api.ai.chat(
+        userMsg,
+        threadAtSend,
+        getUserLocalContext()
+      );
       if (requestId !== sendRequestRef.current) return;
       setThreadId(tid);
       setMessages((m) => [

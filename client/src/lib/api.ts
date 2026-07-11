@@ -1,6 +1,7 @@
 const API_BASE = "/api";
 
 import type { OverviewLayout } from "./overview";
+import type { UserLocalContext } from "./local-time";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const isFormData = options?.body instanceof FormData;
@@ -131,10 +132,10 @@ export const api = {
       }),
     deleteThread: (id: string) =>
       request<{ ok: boolean }>(`/ai/threads/${id}`, { method: "DELETE" }),
-    chat: (message: string, threadId?: string) =>
+    chat: (message: string, threadId?: string, localContext?: UserLocalContext) =>
       request<{ threadId: string; userMessage: AiMessage; message: AiMessage }>("/ai/chat", {
         method: "POST",
-        body: JSON.stringify({ message, threadId }),
+        body: JSON.stringify({ message, threadId, ...localContext }),
       }),
   },
   kpis: {

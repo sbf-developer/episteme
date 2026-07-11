@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Plus, ListTodo, Check } from "lucide-react";
+import { Plus, ListTodo, Check, Pencil } from "lucide-react";
 import { api, type DoItem } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -96,7 +96,7 @@ export function DoListPage() {
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Do-list</h2>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Simple checklist for everyday todos. Drag to set your priority order.
+          Simple checklist for everyday todos. Click a to-do to edit, or drag the handle to reorder.
         </p>
       </div>
 
@@ -215,10 +215,21 @@ function ItemSection({
           return (
             <div
               key={item.id}
-              {...drag}
-              className={`flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-3 transition-colors sm:gap-3 sm:px-4 ${reorderRowClass(drag["data-drag-over"])}`}
+              onDragEnter={drag.onDragEnter}
+              onDragLeave={drag.onDragLeave}
+              onDragOver={drag.onDragOver}
+              onDrop={drag.onDrop}
+              onDragEnd={drag.onDragEnd}
+              className={`group flex items-start gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-elevated)] px-3 py-3 transition-colors sm:gap-3 sm:px-4 ${reorderRowClass(drag["data-drag-over"])}`}
             >
-              <ReorderGrip />
+              <div
+                draggable
+                onDragStart={drag.onDragStart}
+                onDragEnd={drag.onDragEnd}
+                className="shrink-0 touch-none"
+              >
+                <ReorderGrip />
+              </div>
               <button
                 type="button"
                 onClick={() => onToggle(item.id, item.done)}
@@ -249,17 +260,28 @@ function ItemSection({
                     }`}
                   />
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => startEdit(item)}
-                    className={`w-full text-left text-sm leading-snug transition-colors hover:text-[var(--color-accent)] ${
-                      item.done
-                        ? "text-[var(--color-text-tertiary)] line-through"
-                        : "font-medium text-[var(--color-text)]"
-                    }`}
-                  >
-                    {item.title}
-                  </button>
+                  <div className="flex items-start gap-1">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(item)}
+                      className={`min-w-0 flex-1 text-left text-sm leading-snug transition-colors hover:text-[var(--color-accent)] ${
+                        item.done
+                          ? "text-[var(--color-text-tertiary)] line-through"
+                          : "font-medium text-[var(--color-text)]"
+                      }`}
+                    >
+                      {item.title}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(item)}
+                      aria-label="Edit to-do"
+                      title="Edit"
+                      className="shrink-0 rounded p-1 text-[var(--color-text-tertiary)] opacity-60 transition-opacity hover:bg-[var(--color-border-subtle)] hover:text-[var(--color-text)] group-hover:opacity-100"
+                    >
+                      <Pencil size={13} strokeWidth={1.75} />
+                    </button>
+                  </div>
                 )}
                 {item.dueDate && (
                   <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "./auth.js";
-import { buildSystemPrompt, chatWithDeepSeek, fetchUserContext } from "../lib/ai.js";
+import { buildSystemPrompt, chatWithDeepSeek, fetchUserContext, parseUserLocalContext } from "../lib/ai.js";
 import { getEnv } from "../lib/env.js";
 import { z } from "zod";
 
@@ -70,8 +70,12 @@ aiRoutes.post("/chat", async (c) => {
     .object({
       message: z.string().min(1).max(8000),
       threadId: z.string().optional(),
+      timeZone: z.string().max(64).optional(),
+      localDateTime: z.string().max(120).optional(),
     })
     .parse(await c.req.json());
+
+  const localContext = parseUserLocalContext(body.timeZone, body.localDateTime);
 
   let threadId = body.threadId;
   if (!threadId) {
@@ -107,7 +111,8 @@ aiRoutes.post("/chat", async (c) => {
 
   const systemPrompt = buildSystemPrompt(
     context,
-    userSettings?.aiInstructions?.trim() || undefined
+    userSettings?.aiInstructions?.trim() || undefined,
+    localContext
   );
   const messages = history
     .filter((m) => m.role !== "SYSTEM")
