@@ -13,6 +13,8 @@ import {
   PanelLeftClose,
   PanelLeft,
   X,
+  Gauge,
+  ListTodo,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSidebar } from "@/context/SidebarContext";
@@ -24,6 +26,8 @@ const nav = [
   { to: "/notes", icon: FileText, label: "Notes" },
   { to: "/documents", icon: FolderUp, label: "Documents" },
   { to: "/goals", icon: Target, label: "Goals" },
+  { to: "/kpis", icon: Gauge, label: "KPIs" },
+  { to: "/do-list", icon: ListTodo, label: "Do-list" },
   { to: "/actions", icon: CheckSquare, label: "Actions" },
   { to: "/graph", icon: GitBranch, label: "Graph" },
   { to: "/ai", icon: Sparkles, label: "AI" },

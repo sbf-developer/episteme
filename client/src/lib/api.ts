@@ -120,6 +120,27 @@ export const api = {
         body: JSON.stringify({ message, threadId }),
       }),
   },
+  kpis: {
+    list: () => request<Kpi[]>("/kpis"),
+    get: (id: string) => request<Kpi>(`/kpis/${id}`),
+    create: (data: Partial<Kpi>) =>
+      request<Kpi>("/kpis", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Kpi>) =>
+      request<Kpi>(`/kpis/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request<{ ok: boolean }>(`/kpis/${id}`, { method: "DELETE" }),
+  },
+  doList: {
+    list: (done?: boolean) =>
+      request<DoItem[]>(`/do-list${done !== undefined ? `?done=${done}` : ""}`),
+    get: (id: string) => request<DoItem>(`/do-list/${id}`),
+    create: (data: Partial<DoItem>) =>
+      request<DoItem>("/do-list", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<DoItem>) =>
+      request<DoItem>(`/do-list/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request<{ ok: boolean }>(`/do-list/${id}`, { method: "DELETE" }),
+  },
   search: (q: string) => request<{ results: SearchResult[] }>(`/search?q=${encodeURIComponent(q)}`),
 };
 
@@ -159,6 +180,30 @@ export type Action = {
   goalId: string | null;
   dueDate: string | null;
   goal?: { id: string; title: string };
+};
+
+export type Kpi = {
+  id: string;
+  title: string;
+  description: string;
+  currentValue: number;
+  targetValue: number;
+  unit: string;
+  goalId: string | null;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DoItem = {
+  id: string;
+  title: string;
+  description: string;
+  done: boolean;
+  dueDate: string | null;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Connection = {
@@ -233,7 +278,7 @@ export type AiMessage = {
 
 export type SearchResult = {
   id: string;
-  type: "document" | "goal" | "action" | "event" | "file";
+  type: "document" | "goal" | "action" | "event" | "file" | "kpi" | "do-item";
   title: string;
   subtitle: string;
   updatedAt: string;

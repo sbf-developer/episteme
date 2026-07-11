@@ -18,6 +18,8 @@ import { aiRoutes } from "./routes/ai.js";
 import { calendarRoutes } from "./routes/calendar.js";
 import { fileRoutes } from "./routes/files.js";
 import { searchRoutes } from "./routes/search.js";
+import { kpiRoutes } from "./routes/kpis.js";
+import { doListRoutes } from "./routes/do-list.js";
 import { getEnv, isProduction } from "./lib/env.js";
 import { prisma } from "./lib/prisma.js";
 
@@ -65,6 +67,8 @@ app.route("/api/ai", aiRoutes);
 app.route("/api/calendar", calendarRoutes);
 app.route("/api/files", fileRoutes);
 app.route("/api/search", searchRoutes);
+app.route("/api/kpis", kpiRoutes);
+app.route("/api/do-list", doListRoutes);
 
 app.onError((err, c) => {
   if (err instanceof ZodError) {

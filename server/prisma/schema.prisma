@@ -24,6 +24,8 @@ model User {
   calendarEvents CalendarEvent[]
   fileUploads   FileUpload[]
   graphLayouts  GraphLayout[]
+  kpis          Kpi[]
+  doItems       DoItem[]
 
   @@index([email])
 }
@@ -231,4 +233,40 @@ enum MessageRole {
   USER
   ASSISTANT
   SYSTEM
+}
+
+model Kpi {
+  id           String   @id @default(cuid())
+  userId       String
+  title        String
+  description  String   @default("")
+  currentValue Float    @default(0)
+  targetValue  Float
+  unit         String   @default("")
+  goalId       String?
+  position     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([goalId])
+}
+
+model DoItem {
+  id          String    @id @default(cuid())
+  userId      String
+  title       String
+  description String    @default("")
+  done        Boolean   @default(false)
+  dueDate     DateTime?
+  position    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([done])
 }

@@ -309,7 +309,7 @@ export function AiPage() {
             )}
           </div>
           <p className="mt-1 hidden text-xs text-[var(--color-text-secondary)] sm:block">
-            Context-aware help using your goals, calendar, notes, and documents.
+            Context-aware help using your goals, KPIs, Do-list, calendar, notes, and documents.
           </p>
         </header>
 

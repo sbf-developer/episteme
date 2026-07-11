@@ -6,6 +6,8 @@ import type {
   Connection,
   CalendarEvent,
   FileUpload,
+  Kpi,
+  DoItem,
 } from "@prisma/client";
 import { getEnv } from "./env.js";
 
@@ -13,11 +15,19 @@ export type UserContext = {
   user: Pick<User, "id" | "email" | "name">;
   goals: Pick<Goal, "id" | "title" | "description" | "status" | "priority" | "targetDate">[];
   actions: Pick<Action, "id" | "title" | "description" | "status" | "dueDate" | "goalId">[];
+  kpis: Pick<Kpi, "id" | "title" | "description" | "currentValue" | "targetValue" | "unit" | "goalId">[];
+  doItems: Pick<DoItem, "id" | "title" | "description" | "done" | "dueDate">[];
   documents: Pick<Document, "id" | "title" | "content" | "type">[];
   connections: Pick<Connection, "id" | "sourceType" | "sourceId" | "targetType" | "targetId" | "label">[];
   calendarEvents: Pick<CalendarEvent, "id" | "title" | "description" | "startAt" | "endAt" | "allDay">[];
   fileUploads: Pick<FileUpload, "id" | "filename" | "extractedText" | "mimeType">[];
 };
+
+function formatProgress(current: number, target: number, unit: string) {
+  const pct = target !== 0 ? Math.round((current / target) * 100) : 0;
+  const unitSuffix = unit ? ` ${unit}` : "";
+  return `${current}${unitSuffix} / ${target}${unitSuffix} (${pct}%)`;
+}
 
 export function buildSystemPrompt(ctx: UserContext): string {
   const goalsText =
@@ -39,6 +49,26 @@ export function buildSystemPrompt(ctx: UserContext): string {
           )
           .join("\n")
       : "No actions yet.";
+
+  const kpisText =
+    ctx.kpis.length > 0
+      ? ctx.kpis
+          .map(
+            (k) =>
+              `- ${k.title}: ${formatProgress(k.currentValue, k.targetValue, k.unit)}${k.description ? ` — ${k.description}` : ""}`
+          )
+          .join("\n")
+      : "No KPIs tracked yet.";
+
+  const doListText =
+    ctx.doItems.length > 0
+      ? ctx.doItems
+          .map(
+            (d) =>
+              `- [${d.done ? "done" : "todo"}] ${d.title}${d.description ? `: ${d.description}` : ""}${d.dueDate ? ` (due: ${d.dueDate.toISOString().slice(0, 10)})` : ""}`
+          )
+          .join("\n")
+      : "Do-list is empty.";
 
   const notesText =
     ctx.documents.length > 0
@@ -85,6 +115,12 @@ ${goalsText}
 ## Actions / Tasks
 ${actionsText}
 
+## KPIs (key metrics)
+${kpisText}
+
+## Do-list (checklist todos)
+${doListText}
+
 ## Notes
 ${notesText}
 
@@ -100,6 +136,8 @@ ${connectionsText}
 Help them:
 - Clarify and refine goals
 - Break goals into actionable steps
+- Track KPIs and suggest course corrections
+- Prioritize and manage their Do-list
 - Connect ideas and spot patterns across notes, documents, and calendar
 - Track progress and suggest next moves
 - Plan around upcoming events and deadlines
@@ -112,7 +150,7 @@ export async function fetchUserContext(userId: string): Promise<UserContext> {
   const { prisma } = await import("./prisma.js");
   const now = new Date();
 
-  const [user, goals, actions, documents, connections, calendarEvents, fileUploads] =
+  const [user, goals, actions, kpis, doItems, documents, connections, calendarEvents, fileUploads] =
     await Promise.all([
       prisma.user.findUniqueOrThrow({
         where: { id: userId },
@@ -142,6 +180,32 @@ export async function fetchUserContext(userId: string): Promise<UserContext> {
           goalId: true,
         },
         orderBy: [{ position: "asc" }, { updatedAt: "desc" }],
+        take: 50,
+      }),
+      prisma.kpi.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          currentValue: true,
+          targetValue: true,
+          unit: true,
+          goalId: true,
+        },
+        orderBy: [{ position: "asc" }, { updatedAt: "desc" }],
+        take: 30,
+      }),
+      prisma.doItem.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          done: true,
+          dueDate: true,
+        },
+        orderBy: [{ done: "asc" }, { position: "asc" }, { updatedAt: "desc" }],
         take: 50,
       }),
       prisma.document.findMany({
@@ -183,7 +247,7 @@ export async function fetchUserContext(userId: string): Promise<UserContext> {
       }),
     ]);
 
-  return { user, goals, actions, documents, connections, calendarEvents, fileUploads };
+  return { user, goals, actions, kpis, doItems, documents, connections, calendarEvents, fileUploads };
 }
 
 export async function chatWithDeepSeek(

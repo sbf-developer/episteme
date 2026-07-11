@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Target, CheckSquare, FileText, Sparkles, Calendar } from "lucide-react";
-import { api, type Goal, type Action, type Document, type CalendarEvent } from "@/lib/api";
+import { Target, CheckSquare, FileText, Sparkles, Calendar, Gauge, ListTodo } from "lucide-react";
+import { api, type Goal, type Action, type Document, type CalendarEvent, type Kpi, type DoItem } from "@/lib/api";
 
 function formatEventDate(iso: string, allDay: boolean) {
   const d = new Date(iso);
@@ -9,9 +9,16 @@ function formatEventDate(iso: string, allDay: boolean) {
   return d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
+function kpiMeta(kpi: Kpi) {
+  const pct = kpi.targetValue !== 0 ? Math.round((kpi.currentValue / kpi.targetValue) * 100) : 0;
+  return `${pct}%`;
+}
+
 export function HomePage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [actions, setActions] = useState<Action[]>([]);
+  const [kpis, setKpis] = useState<Kpi[]>([]);
+  const [doItems, setDoItems] = useState<DoItem[]>([]);
   const [notes, setNotes] = useState<Document[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
 
@@ -19,11 +26,15 @@ export function HomePage() {
     Promise.all([
       api.goals.list(),
       api.actions.list(),
+      api.kpis.list(),
+      api.doList.list(),
       api.documents.list(),
       api.calendar.list({ upcoming: true }),
-    ]).then(([g, a, n, e]) => {
+    ]).then(([g, a, k, d, n, e]) => {
       setGoals(g.filter((x) => x.status === "ACTIVE").slice(0, 5));
       setActions(a.filter((x) => x.status !== "DONE").slice(0, 5));
+      setKpis(k.slice(0, 5));
+      setDoItems(d.filter((x) => !x.done).slice(0, 5));
       setNotes(n.slice(0, 5));
       setEvents(e.slice(0, 5));
     });
@@ -37,6 +48,20 @@ export function HomePage() {
       </p>
 
       <div className="mt-8 grid gap-6">
+        <Section
+          title="Do-list"
+          icon={<ListTodo size={16} />}
+          link="/do-list"
+          empty="Nothing to do"
+          items={doItems.map((d) => ({ id: d.id, title: d.title }))}
+        />
+        <Section
+          title="KPIs"
+          icon={<Gauge size={16} />}
+          link="/kpis"
+          empty="No KPIs tracked"
+          items={kpis.map((k) => ({ id: k.id, title: k.title, meta: kpiMeta(k) }))}
+        />
         <Section
           title="Upcoming"
           icon={<Calendar size={16} />}
@@ -90,7 +115,7 @@ export function HomePage() {
         <div>
           <p className="text-sm font-medium">Ask AI</p>
           <p className="text-xs text-[var(--color-text-secondary)]">
-            Context-aware help across your goals, calendar, notes, and uploaded documents.
+            Context-aware help across your goals, KPIs, Do-list, calendar, and notes.
           </p>
         </div>
       </Link>

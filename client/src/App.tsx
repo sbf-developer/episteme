@@ -12,6 +12,8 @@ import { GraphPage } from "@/pages/GraphPage";
 import { CalendarPage } from "@/pages/CalendarPage";
 import { DocumentsPage } from "@/pages/DocumentsPage";
 import { AiPage } from "@/pages/AiPage";
+import { KpisPage } from "@/pages/KpisPage";
+import { DoListPage } from "@/pages/DoListPage";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +31,8 @@ export function App() {
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/notes/:id" element={<NoteEditorPage />} />
               <Route path="/goals" element={<GoalsPage />} />
+              <Route path="/kpis" element={<KpisPage />} />
+              <Route path="/do-list" element={<DoListPage />} />
               <Route path="/actions" element={<ActionsPage />} />
               <Route path="/graph" element={<GraphPage />} />
               <Route path="/ai" element={<AiPage />} />

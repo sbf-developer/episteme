@@ -13,7 +13,7 @@ searchRoutes.get("/", async (c) => {
   const q = c.req.query("q")?.trim().slice(0, 200);
   if (!q) return c.json({ results: [] });
 
-  const [documents, goals, actions, events, files] = await Promise.all([
+  const [documents, goals, actions, events, files, kpis, doItems] = await Promise.all([
     prisma.document.findMany({
       where: {
         userId,
@@ -69,6 +69,28 @@ searchRoutes.get("/", async (c) => {
       take: 10,
       select: { id: true, filename: true, mimeType: true, updatedAt: true },
     }),
+    prisma.kpi.findMany({
+      where: {
+        userId,
+        OR: [
+          { title: { contains: q, mode: "insensitive" } },
+          { description: { contains: q, mode: "insensitive" } },
+        ],
+      },
+      take: 10,
+      select: { id: true, title: true, currentValue: true, targetValue: true, unit: true, updatedAt: true },
+    }),
+    prisma.doItem.findMany({
+      where: {
+        userId,
+        OR: [
+          { title: { contains: q, mode: "insensitive" } },
+          { description: { contains: q, mode: "insensitive" } },
+        ],
+      },
+      take: 10,
+      select: { id: true, title: true, done: true, updatedAt: true },
+    }),
   ]);
 
   const results = [
@@ -106,6 +128,20 @@ searchRoutes.get("/", async (c) => {
       title: f.filename,
       subtitle: f.mimeType,
       updatedAt: f.updatedAt,
+    })),
+    ...kpis.map((k) => ({
+      id: k.id,
+      type: "kpi" as const,
+      title: k.title,
+      subtitle: `${k.currentValue}/${k.targetValue}${k.unit ? ` ${k.unit}` : ""}`,
+      updatedAt: k.updatedAt,
+    })),
+    ...doItems.map((d) => ({
+      id: d.id,
+      type: "do-item" as const,
+      title: d.title,
+      subtitle: d.done ? "Done" : "To do",
+      updatedAt: d.updatedAt,
     })),
   ].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
