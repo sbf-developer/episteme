@@ -1,6 +1,7 @@
 import type {
   User,
   Goal,
+  Action,
   Document,
   Connection,
   CalendarEvent,
@@ -32,6 +33,7 @@ export type UserContext = {
     "id" | "title" | "description" | "startAt" | "endAt" | "allDay" | "goalId" | "actionId"
   >[];
   fileUploads: Pick<FileUpload, "id" | "filename" | "extractedText" | "mimeType">[];
+  legacyActions: Pick<Action, "id" | "title">[];
 };
 
 export type UserLocalContext = {
@@ -110,6 +112,7 @@ function buildTitleMaps(ctx: UserContext) {
   for (const d of ctx.documents) entityLabels.set(`DOCUMENT:${d.id}`, d.title);
   for (const g of ctx.goals) entityLabels.set(`GOAL:${g.id}`, g.title);
   for (const d of ctx.doItems) entityLabels.set(`DO_ITEM:${d.id}`, d.title);
+  for (const a of ctx.legacyActions) entityLabels.set(`ACTION:${a.id}`, a.title);
   for (const e of ctx.calendarEvents) entityLabels.set(`CALENDAR_EVENT:${e.id}`, e.title);
   for (const f of ctx.fileUploads) entityLabels.set(`FILE:${f.id}`, f.filename);
 
@@ -361,7 +364,36 @@ export async function fetchUserContext(userId: string): Promise<UserContext> {
       }),
     ]);
 
-  return { user, goals, kpis, doItems, documents, connections, calendarEvents, fileUploads };
+  const actionIds = [
+    ...new Set(
+      connections.flatMap((c) => {
+        const ids: string[] = [];
+        if (c.sourceType === "ACTION") ids.push(c.sourceId);
+        if (c.targetType === "ACTION") ids.push(c.targetId);
+        return ids;
+      })
+    ),
+  ];
+
+  const legacyActions =
+    actionIds.length > 0
+      ? await prisma.action.findMany({
+          where: { userId, id: { in: actionIds } },
+          select: { id: true, title: true },
+        })
+      : [];
+
+  return {
+    user,
+    goals,
+    kpis,
+    doItems,
+    documents,
+    connections,
+    calendarEvents,
+    fileUploads,
+    legacyActions,
+  };
 }
 
 export async function chatWithDeepSeek(

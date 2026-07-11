@@ -93,18 +93,22 @@ doListRoutes.patch("/:id", async (c) => {
   });
   if (!existing) return c.json({ error: "Not found" }, 404);
 
-  const item = await prisma.doItem.update({
-    where: { id: existing.id },
-    data: {
-      ...body,
-      dueDate:
-        body.dueDate === null ? null : body.dueDate ? new Date(body.dueDate) : undefined,
-    },
-  });
+  const item = await prisma.$transaction(async (tx) => {
+    const updated = await tx.doItem.update({
+      where: { id: existing.id },
+      data: {
+        ...body,
+        dueDate:
+          body.dueDate === null ? null : body.dueDate ? new Date(body.dueDate) : undefined,
+      },
+    });
 
-  if (!existing.done && item.done) {
-    await removeEntityFromGraph(userId, "DO_ITEM", item.id);
-  }
+    if (!existing.done && updated.done) {
+      await removeEntityFromGraph(userId, "DO_ITEM", updated.id, tx);
+    }
+
+    return updated;
+  });
 
   return c.json(item);
 });
@@ -115,7 +119,9 @@ doListRoutes.delete("/:id", async (c) => {
     where: { id: c.req.param("id"), userId },
   });
   if (!existing) return c.json({ error: "Not found" }, 404);
-  await removeEntityFromGraph(userId, "DO_ITEM", existing.id);
-  await prisma.doItem.delete({ where: { id: existing.id } });
+  await prisma.$transaction(async (tx) => {
+    await removeEntityFromGraph(userId, "DO_ITEM", existing.id, tx);
+    await tx.doItem.delete({ where: { id: existing.id } });
+  });
   return c.json({ ok: true });
 });
