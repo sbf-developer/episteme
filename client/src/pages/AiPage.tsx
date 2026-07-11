@@ -57,6 +57,8 @@ export function AiPage() {
   const [instructionsError, setInstructionsError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const openRequestRef = useRef(0);
+  const hasAutoOpened = useRef(false);
+  const wantsNewChat = useRef(false);
   const instructionsSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const instructionsRef = useRef(aiInstructions);
   instructionsRef.current = aiInstructions;
@@ -139,13 +141,15 @@ export function AiPage() {
   const closeThreads = () => setShowThreads(false);
 
   const startNewChat = () => {
+    wantsNewChat.current = true;
     setThreadId(undefined);
     setMessages([]);
     setInput("");
     if (isNarrow) closeThreads();
   };
 
-  const openThread = async (id: string) => {
+  const openThread = useCallback(async (id: string) => {
+    wantsNewChat.current = false;
     if (id === threadId) {
       if (isNarrow) closeThreads();
       return;
@@ -156,6 +160,7 @@ export function AiPage() {
     try {
       const thread = await api.ai.thread(id);
       if (requestId !== openRequestRef.current) return;
+      if (wantsNewChat.current) return;
       setThreadId(thread.id);
       setMessages(thread.messages);
       if (isNarrow) closeThreads();
@@ -172,7 +177,17 @@ export function AiPage() {
     } finally {
       if (requestId === openRequestRef.current) setLoadingThread(false);
     }
-  };
+  }, [threadId, isNarrow]);
+
+  useEffect(() => {
+    if (hasAutoOpened.current || wantsNewChat.current || loadingThreads || threadSearch.trim()) return;
+    if (threads.length === 0) {
+      hasAutoOpened.current = true;
+      return;
+    }
+    hasAutoOpened.current = true;
+    void openThread(threads[0].id);
+  }, [threads, loadingThreads, threadSearch, openThread]);
 
   const deleteThread = async (id: string) => {
     if (!confirm("Delete this conversation?")) return;
@@ -418,7 +433,7 @@ export function AiPage() {
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 sm:px-5">
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-2 sm:py-4">
-            {messages.length === 0 && !sending && !loadingThread && (
+            {messages.length === 0 && !sending && !loadingThread && !loadingThreads && (
               <div className="flex flex-col items-center justify-center py-16 sm:py-24">
                 <div className="flex flex-col items-center gap-1.5">
                   {SUGGESTIONS.map((s) => (
