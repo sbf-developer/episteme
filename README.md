@@ -1,18 +1,31 @@
 # Dasein
 
-Personal ontology & epistemology app — map goals, connect ideas, track actions, and get AI-assisted planning.
+Personal productivity workspace — goals, actions, KPIs, do-list, notes, calendar, knowledge graph, and context-aware AI.
 
 **Stack:** Vite + React (SPA) · Hono API · PostgreSQL · Prisma · Google OAuth · DeepSeek AI
 
+## Screenshots
+
+### Overview
+![Dasein overview](docs/screenshots/overview.png)
+
+### AI chat
+![Dasein AI chat](docs/screenshots/ai-chat.png)
+
+### Knowledge graph
+![Dasein knowledge graph](docs/screenshots/graph.png)
+
 ## Features
 
-- Notes with auto-save, Save, Save As
-- Goals and linked actions
+- Customizable home overview
+- Goals, actions, KPIs, and do-list (drag to reorder)
+- Notes with auto-save
+- Calendar and document uploads
 - Knowledge graph visualization
-- AI assistant with full user context (DeepSeek)
+- AI assistant with full user context, chat history, and personalization
 - Global search
 - Google sign-in
-- Minimal Apple/Cursor-inspired UI
+- Minimal, modern UI
 
 ## Local development
 
@@ -119,6 +132,7 @@ Returns `{ ok: true, db: "connected" }` when healthy.
 client/          Vite + React SPA
 server/          Hono API + Prisma
   prisma/        Schema + migrations
+docs/            Screenshots and docs
 deploy/          nginx config + start script
 ```
 
