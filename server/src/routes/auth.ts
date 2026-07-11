@@ -10,6 +10,7 @@ import {
   sessionCookieOptions,
 } from "../lib/auth.js";
 import { getEnv, googleAuthConfigured, cookieSecure } from "../lib/env.js";
+import { DEFAULT_AI_INSTRUCTIONS } from "../lib/ai-instructions.js";
 type Variables = { userId: string };
 
 const OAUTH_STATE_COOKIE = "pe_oauth_state";
@@ -104,6 +105,7 @@ authRoutes.get("/google/callback", async (c) => {
         email: profile.email,
         name: profile.name,
         image: profile.picture,
+        aiInstructions: DEFAULT_AI_INSTRUCTIONS,
       },
     });
   } else {

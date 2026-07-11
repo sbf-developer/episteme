@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Search, Send, Trash2, X, PanelLeft, PanelLeftClose, SlidersHorizontal, Pencil } from "lucide-react";
+import { Plus, Search, Send, Trash2, X, PanelLeft, PanelLeftClose, SlidersHorizontal, Pencil, Copy, Check } from "lucide-react";
 import { api, type AiMessage, type AiThreadListItem } from "@/lib/api";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -13,8 +13,10 @@ const SUGGESTIONS = [
   "What patterns do you see in my notes?",
 ];
 
+const DEFAULT_AI_INSTRUCTIONS = "Give me short, direct answers.";
+
 const INSTRUCTION_PRESETS = [
-  "Give me short, direct answers.",
+  DEFAULT_AI_INSTRUCTIONS,
   "Be detailed and thorough.",
   "Challenge my thinking — push back when needed.",
   "Use bullet points.",
@@ -63,8 +65,10 @@ export function AiPage() {
   const [instructionsError, setInstructionsError] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const openRequestRef = useRef(0);
   const sendRequestRef = useRef(0);
   const instructionsSaveGen = useRef(0);
@@ -159,6 +163,10 @@ export function AiPage() {
   }, [isNarrow, showThreads]);
 
   useEffect(() => {
+    return () => clearTimeout(copyTimeoutRef.current);
+  }, []);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
@@ -223,13 +231,13 @@ export function AiPage() {
       return;
     }
     const requestId = ++openRequestRef.current;
+    setThreadId(id);
     setMessages([]);
     setLoadingThread(true);
     try {
       const thread = await api.ai.thread(id);
       if (requestId !== openRequestRef.current) return;
       if (wantsNewChat.current) return;
-      setThreadId(thread.id);
       setMessages(thread.messages);
       if (isNarrow) closeThreads();
     } catch (err) {
@@ -268,6 +276,20 @@ export function AiPage() {
     }
   };
 
+  const copyMessage = async (id: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedId(id);
+      clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(
+        () => setCopiedId((current) => (current === id ? null : current)),
+        1500
+      );
+    } catch {
+      alert("Could not copy to clipboard");
+    }
+  };
+
   const send = async () => {
     if (!input.trim() || sending) return;
     const requestId = ++sendRequestRef.current;
@@ -298,7 +320,7 @@ export function AiPage() {
     } catch (err) {
       if (requestId !== sendRequestRef.current) return;
       setMessages((m) => [
-        ...m.filter((x) => !x.id.startsWith("temp-")),
+        ...m,
         {
           id: `err-${Date.now()}`,
           role: "ASSISTANT",
@@ -306,6 +328,7 @@ export function AiPage() {
           createdAt: new Date().toISOString(),
         },
       ]);
+      setInput(userMsg);
     } finally {
       if (requestId === sendRequestRef.current) setSending(false);
     }
@@ -382,7 +405,7 @@ export function AiPage() {
               }`}
             >
               <div className="min-w-0 flex-1">
-                {renamingId === t.id ? (
+                {renamingId === t.id && showThreads && !isNarrow ? (
                   <input
                     ref={renameInputRef}
                     value={renameDraft}
@@ -472,7 +495,7 @@ export function AiPage() {
               <PanelLeft size={17} strokeWidth={1.75} />
             </button>
           )}
-          {threadId && renamingId === threadId ? (
+          {threadId && renamingId === threadId && (!showThreads || isNarrow) ? (
             <input
               ref={renameInputRef}
               value={renameDraft}
@@ -551,7 +574,11 @@ export function AiPage() {
                     key={preset}
                     type="button"
                     onClick={() => addPreset(preset)}
-                    className="rounded-full px-2.5 py-1 text-xs text-[var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-border-subtle)] hover:text-[var(--color-text)]"
+                    className={`rounded-full px-2.5 py-1 text-xs transition-colors ${
+                      aiInstructions.trim() === preset
+                        ? "bg-[var(--color-text)] text-white"
+                        : "text-[var(--color-text-tertiary)] hover:bg-[var(--color-border-subtle)] hover:text-[var(--color-text)]"
+                    }`}
                   >
                     {preset}
                   </button>
@@ -590,7 +617,7 @@ export function AiPage() {
               messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex ${msg.role === "USER" ? "justify-end" : "justify-start"}`}
+                  className={`group flex flex-col gap-1 ${msg.role === "USER" ? "items-end" : "items-start"}`}
                 >
                   <div
                     className={`max-w-[min(90%,34rem)] text-sm leading-relaxed ${
@@ -607,6 +634,19 @@ export function AiPage() {
                       </div>
                     )}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => copyMessage(msg.id, msg.content)}
+                    title={copiedId === msg.id ? "Copied" : msg.role === "USER" ? "Copy message" : "Copy response"}
+                    aria-label={msg.role === "USER" ? "Copy message" : "Copy response"}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-surface-elevated)] text-[var(--color-text-tertiary)] opacity-60 shadow-[0_0_0_1px_var(--color-border-subtle)] transition-opacity hover:text-[var(--color-text)] lg:opacity-0 lg:group-hover:opacity-100"
+                  >
+                    {copiedId === msg.id ? (
+                      <Check size={13} strokeWidth={1.75} />
+                    ) : (
+                      <Copy size={13} strokeWidth={1.75} />
+                    )}
+                  </button>
                 </div>
               ))}
 

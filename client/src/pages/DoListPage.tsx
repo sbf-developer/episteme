@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, ListTodo, Check } from "lucide-react";
 import { api, type DoItem } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
@@ -9,14 +9,22 @@ import { useDragReorder } from "@/hooks/useDragReorder";
 export function DoListPage() {
   const [items, setItems] = useState<DoItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
+  const loadGen = useRef(0);
 
   const load = async () => {
+    const gen = ++loadGen.current;
     try {
       const list = await api.doList.list();
+      if (gen !== loadGen.current) return;
       setItems(list);
+      setError(null);
+    } catch (err) {
+      if (gen !== loadGen.current) return;
+      setError(err instanceof Error ? err.message : "Could not load do-list");
     } finally {
-      setLoading(false);
+      if (gen === loadGen.current) setLoading(false);
     }
   };
   useEffect(() => {
@@ -25,16 +33,21 @@ export function DoListPage() {
 
   const create = async () => {
     if (!newTitle.trim()) return;
-    await api.doList.create({ title: newTitle.trim() });
-    setNewTitle("");
-    load();
+    const title = newTitle.trim();
+    try {
+      await api.doList.create({ title });
+      setNewTitle("");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not add item");
+    }
   };
 
   const toggle = async (id: string, done: boolean) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, done: !done } : i)));
     try {
       await api.doList.update(id, { done: !done });
-      load();
+      await load();
     } catch {
       setItems((prev) => prev.map((i) => (i.id === id ? { ...i, done } : i)));
     }
@@ -42,13 +55,37 @@ export function DoListPage() {
 
   const remove = async (id: string) => {
     if (!confirm("Delete this item?")) return;
-    await api.doList.delete(id);
-    load();
+    try {
+      await api.doList.delete(id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete item");
+    }
+  };
+
+  const saveTitle = async (id: string, title: string) => {
+    const trimmed = title.trim();
+    const previous = items.find((i) => i.id === id)?.title;
+    if (!trimmed || trimmed === previous) return;
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, title: trimmed } : i)));
+    try {
+      await api.doList.update(id, { title: trimmed });
+      await load();
+    } catch {
+      if (previous) {
+        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, title: previous } : i)));
+      }
+    }
   };
 
   const reorder = async (ids: string[], done: boolean) => {
-    await api.doList.reorder(ids, done);
-    await load();
+    try {
+      await api.doList.reorder(ids, done);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reorder items");
+      await load();
+    }
   };
 
   const active = items.filter((i) => !i.done);
@@ -62,6 +99,10 @@ export function DoListPage() {
           Simple checklist for everyday todos. Drag to set your priority order.
         </p>
       </div>
+
+      {error && (
+        <p className="mt-4 text-sm text-red-600">{error}</p>
+      )}
 
       <div className="mt-6 flex flex-col gap-2 sm:flex-row">
         <Input
@@ -84,6 +125,7 @@ export function DoListPage() {
             items={active}
             onToggle={toggle}
             onRemove={remove}
+            onSaveTitle={saveTitle}
             onReorder={(ids) => reorder(ids, false)}
           />
           {done.length > 0 && (
@@ -92,6 +134,7 @@ export function DoListPage() {
               items={done}
               onToggle={toggle}
               onRemove={remove}
+              onSaveTitle={saveTitle}
               onReorder={(ids) => reorder(ids, true)}
               muted
             />
@@ -119,6 +162,7 @@ function ItemSection({
   items,
   onToggle,
   onRemove,
+  onSaveTitle,
   onReorder,
   muted,
 }: {
@@ -126,10 +170,37 @@ function ItemSection({
   items: DoItem[];
   onToggle: (id: string, done: boolean) => void;
   onRemove: (id: string) => void;
+  onSaveTitle: (id: string, title: string) => void | Promise<void>;
   onReorder: (ids: string[]) => void | Promise<void>;
   muted?: boolean;
 }) {
   const { displayItems, rowProps } = useDragReorder(items, onReorder);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingId) editInputRef.current?.focus();
+  }, [editingId]);
+
+  const startEdit = (item: DoItem) => {
+    setEditingId(item.id);
+    setEditDraft(item.title);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditDraft("");
+  };
+
+  const commitEdit = (id: string, originalTitle: string) => {
+    const trimmed = editDraft.trim();
+    setEditingId(null);
+    setEditDraft("");
+    if (trimmed && trimmed !== originalTitle) {
+      void onSaveTitle(id, trimmed);
+    }
+  };
 
   if (items.length === 0) return null;
 
@@ -161,15 +232,35 @@ function ItemSection({
                 {item.done && <Check size={12} strokeWidth={3} />}
               </button>
               <div className="min-w-0 flex-1">
-                <p
-                  className={`text-sm leading-snug ${
-                    item.done
-                      ? "text-[var(--color-text-tertiary)] line-through"
-                      : "font-medium text-[var(--color-text)]"
-                  }`}
-                >
-                  {item.title}
-                </p>
+                {editingId === item.id ? (
+                  <input
+                    ref={editInputRef}
+                    value={editDraft}
+                    onChange={(e) => setEditDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitEdit(item.id, item.title);
+                      if (e.key === "Escape") cancelEdit();
+                    }}
+                    onBlur={() => commitEdit(item.id, item.title)}
+                    className={`w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-sm leading-snug outline-none focus:border-[var(--color-accent)] ${
+                      item.done
+                        ? "text-[var(--color-text-tertiary)] line-through"
+                        : "font-medium text-[var(--color-text)]"
+                    }`}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => startEdit(item)}
+                    className={`w-full text-left text-sm leading-snug transition-colors hover:text-[var(--color-accent)] ${
+                      item.done
+                        ? "text-[var(--color-text-tertiary)] line-through"
+                        : "font-medium text-[var(--color-text)]"
+                    }`}
+                  >
+                    {item.title}
+                  </button>
+                )}
                 {item.dueDate && (
                   <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
                     Due {new Date(item.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}

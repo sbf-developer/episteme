@@ -120,7 +120,6 @@ aiRoutes.post("/chat", async (c) => {
   try {
     reply = await chatWithDeepSeek(systemPrompt, messages);
   } catch {
-    await prisma.aiMessage.delete({ where: { id: userMsg.id } });
     return c.json({ error: "AI service unavailable" }, 503);
   }
 

@@ -13,7 +13,7 @@ model User {
   name      String?
   image     String?
   overviewLayout Json?
-  aiInstructions String   @default("")
+  aiInstructions String   @default("Give me short, direct answers.")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
