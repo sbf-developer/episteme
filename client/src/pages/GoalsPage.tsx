@@ -105,11 +105,6 @@ export function GoalsPage() {
                             {goal.description}
                           </p>
                         )}
-                        {goal.actions && goal.actions.length > 0 && (
-                          <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">
-                            {goal.actions.length} action{goal.actions.length !== 1 ? "s" : ""}
-                          </p>
-                        )}
                       </div>
                       <div className="flex shrink-0 flex-wrap gap-1">
                         <Button variant="ghost" onClick={() => setEditing(goal.id)}>

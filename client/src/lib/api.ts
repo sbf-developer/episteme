@@ -257,9 +257,9 @@ export type DoItem = {
 
 export type Connection = {
   id: string;
-  sourceType: "DOCUMENT" | "GOAL" | "ACTION" | "CALENDAR_EVENT" | "FILE";
+  sourceType: "DOCUMENT" | "GOAL" | "ACTION" | "DO_ITEM" | "CALENDAR_EVENT" | "FILE";
   sourceId: string;
-  targetType: "DOCUMENT" | "GOAL" | "ACTION" | "CALENDAR_EVENT" | "FILE";
+  targetType: "DOCUMENT" | "GOAL" | "ACTION" | "DO_ITEM" | "CALENDAR_EVENT" | "FILE";
   targetId: string;
   label: string | null;
 };
@@ -289,7 +289,7 @@ export type FileUpload = {
 export type GraphNode = {
   id: string;
   label: string;
-  type: "DOCUMENT" | "GOAL" | "ACTION" | "CALENDAR_EVENT" | "FILE";
+  type: "DOCUMENT" | "GOAL" | "ACTION" | "DO_ITEM" | "CALENDAR_EVENT" | "FILE";
   subtype: string;
 };
 
@@ -327,7 +327,7 @@ export type AiMessage = {
 
 export type SearchResult = {
   id: string;
-  type: "document" | "goal" | "action" | "event" | "file" | "kpi" | "do-item";
+  type: "document" | "goal" | "event" | "file" | "kpi" | "do-item";
   title: string;
   subtitle: string;
   updatedAt: string;

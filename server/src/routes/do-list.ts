@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "./auth.js";
 import { reorderByIds } from "../lib/reorder.js";
+import { removeEntityFromGraph } from "../lib/graph.js";
 import { z } from "zod";
 
 type Variables = { userId: string };
@@ -100,6 +101,11 @@ doListRoutes.patch("/:id", async (c) => {
         body.dueDate === null ? null : body.dueDate ? new Date(body.dueDate) : undefined,
     },
   });
+
+  if (!existing.done && item.done) {
+    await removeEntityFromGraph(userId, "DO_ITEM", item.id);
+  }
+
   return c.json(item);
 });
 
@@ -109,6 +115,7 @@ doListRoutes.delete("/:id", async (c) => {
     where: { id: c.req.param("id"), userId },
   });
   if (!existing) return c.json({ error: "Not found" }, 404);
+  await removeEntityFromGraph(userId, "DO_ITEM", existing.id);
   await prisma.doItem.delete({ where: { id: existing.id } });
   return c.json({ ok: true });
 });

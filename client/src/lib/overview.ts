@@ -4,7 +4,6 @@ export const OVERVIEW_SECTION_LABELS: Record<string, string> = {
   kpis: "KPIs",
   upcoming: "Upcoming",
   goals: "Goals",
-  actions: "Actions",
   notes: "Notes",
 };
 

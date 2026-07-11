@@ -7,9 +7,9 @@ import { z } from "zod";
 type Variables = { userId: string };
 
 const connectionSchema = z.object({
-  sourceType: z.enum(["DOCUMENT", "GOAL", "ACTION", "CALENDAR_EVENT", "FILE"]),
+  sourceType: z.enum(["DOCUMENT", "GOAL", "ACTION", "DO_ITEM", "CALENDAR_EVENT", "FILE"]),
   sourceId: z.string(),
-  targetType: z.enum(["DOCUMENT", "GOAL", "ACTION", "CALENDAR_EVENT", "FILE"]),
+  targetType: z.enum(["DOCUMENT", "GOAL", "ACTION", "DO_ITEM", "CALENDAR_EVENT", "FILE"]),
   targetId: z.string(),
   label: z.string().optional(),
 });
@@ -27,7 +27,7 @@ connectionRoutes.get("/", async (c) => {
 connectionRoutes.get("/graph", async (c) => {
   const userId = c.get("userId");
 
-  const [documents, goals, actions, events, files, connections, layouts] = await Promise.all([
+  const [documents, goals, doItems, events, files, connections, layouts] = await Promise.all([
     prisma.document.findMany({
       where: { userId },
       select: { id: true, title: true, type: true },
@@ -36,9 +36,9 @@ connectionRoutes.get("/graph", async (c) => {
       where: { userId, status: { not: "ARCHIVED" } },
       select: { id: true, title: true, status: true },
     }),
-    prisma.action.findMany({
-      where: { userId },
-      select: { id: true, title: true, status: true },
+    prisma.doItem.findMany({
+      where: { userId, done: false },
+      select: { id: true, title: true },
     }),
     prisma.calendarEvent.findMany({
       where: { userId },
@@ -65,11 +65,11 @@ connectionRoutes.get("/graph", async (c) => {
       type: "GOAL" as const,
       subtype: g.status,
     })),
-    ...actions.map((a) => ({
-      id: `ACTION:${a.id}`,
-      label: a.title,
-      type: "ACTION" as const,
-      subtype: a.status,
+    ...doItems.map((d) => ({
+      id: `DO_ITEM:${d.id}`,
+      label: d.title,
+      type: "DO_ITEM" as const,
+      subtype: "todo",
     })),
     ...events.map((e) => ({
       id: `CALENDAR_EVENT:${e.id}`,

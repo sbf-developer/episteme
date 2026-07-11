@@ -34,12 +34,12 @@ export async function assertEntityOwned(
     ACTION: () => prisma.action.findFirst({ where: { id, userId } }),
     CALENDAR_EVENT: () => prisma.calendarEvent.findFirst({ where: { id, userId } }),
     FILE: () => prisma.fileUpload.findFirst({ where: { id, userId } }),
+    DO_ITEM: () => prisma.doItem.findFirst({ where: { id, userId } }),
   };
 
   const entity = await checks[type]();
   if (!entity) throw new OwnershipError(`${type} not found`);
 }
-
 export async function validateGoalRef(userId: string, goalId: string | null | undefined) {
   if (goalId) await assertGoalOwned(userId, goalId);
 }

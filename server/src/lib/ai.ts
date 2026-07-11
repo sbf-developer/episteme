@@ -1,7 +1,6 @@
 import type {
   User,
   Goal,
-  Action,
   Document,
   Connection,
   CalendarEvent,
@@ -18,7 +17,6 @@ export type UserContext = {
     Goal,
     "id" | "title" | "description" | "status" | "priority" | "targetDate" | "parentId"
   >[];
-  actions: Pick<Action, "id" | "title" | "description" | "status" | "dueDate" | "goalId">[];
   kpis: Pick<
     Kpi,
     "id" | "title" | "description" | "currentValue" | "targetValue" | "unit" | "goalId"
@@ -58,7 +56,6 @@ export function parseUserLocalContext(
 
 const ENTITY_LIMITS = {
   goals: 60,
-  actions: 80,
   kpis: 40,
   doItems: 60,
   connections: 120,
@@ -105,7 +102,6 @@ function truncate(text: string, max: number) {
 
 function buildTitleMaps(ctx: UserContext) {
   const goals = new Map(ctx.goals.map((g) => [g.id, g.title]));
-  const actions = new Map(ctx.actions.map((a) => [a.id, a.title]));
   const documents = new Map(ctx.documents.map((d) => [d.id, d.title]));
   const events = new Map(ctx.calendarEvents.map((e) => [e.id, e.title]));
   const files = new Map(ctx.fileUploads.map((f) => [f.id, f.filename]));
@@ -113,11 +109,11 @@ function buildTitleMaps(ctx: UserContext) {
   const entityLabels = new Map<string, string>();
   for (const d of ctx.documents) entityLabels.set(`DOCUMENT:${d.id}`, d.title);
   for (const g of ctx.goals) entityLabels.set(`GOAL:${g.id}`, g.title);
-  for (const a of ctx.actions) entityLabels.set(`ACTION:${a.id}`, a.title);
+  for (const d of ctx.doItems) entityLabels.set(`DO_ITEM:${d.id}`, d.title);
   for (const e of ctx.calendarEvents) entityLabels.set(`CALENDAR_EVENT:${e.id}`, e.title);
   for (const f of ctx.fileUploads) entityLabels.set(`FILE:${f.id}`, f.filename);
 
-  return { goals, actions, documents, events, files, entityLabels };
+  return { goals, documents, events, files, entityLabels };
 }
 
 function resolveEntityLabel(
@@ -134,7 +130,7 @@ export function buildSystemPrompt(
   localContext?: UserLocalContext
 ): string {
   const tz = localContext?.timeZone;
-  const { goals: goalTitles, actions: actionTitles, entityLabels } = buildTitleMaps(ctx);
+  const { goals: goalTitles, entityLabels } = buildTitleMaps(ctx);
 
   const goalsText =
     ctx.goals.length > 0
@@ -152,22 +148,6 @@ export function buildSystemPrompt(
           })
           .join("\n")
       : "No goals yet.";
-
-  const actionsText =
-    ctx.actions.length > 0
-      ? ctx.actions
-          .map((a) => {
-            const goal = a.goalId ? goalTitles.get(a.goalId) : null;
-            const parts = [
-              `[${a.status}] ${a.title}`,
-              a.description ? `: ${a.description}` : "",
-              goal ? ` (goal: ${goal})` : "",
-              a.dueDate ? ` (due: ${formatDate(a.dueDate, tz)})` : "",
-            ];
-            return `- ${parts.join("")}`;
-          })
-          .join("\n")
-      : "No actions yet.";
 
   const kpisText =
     ctx.kpis.length > 0
@@ -204,16 +184,10 @@ export function buildSystemPrompt(
       ? ctx.calendarEvents
           .map((e) => {
             const goal = e.goalId ? goalTitles.get(e.goalId) : null;
-            const action = e.actionId ? actionTitles.get(e.actionId) : null;
             const when = e.allDay
               ? formatDate(e.startAt, tz)
               : `${formatDateTime(e.startAt, tz)}${e.endAt ? ` → ${formatDateTime(e.endAt, tz)}` : ""}`;
-            const links = [
-              goal ? `goal: ${goal}` : null,
-              action ? `action: ${action}` : null,
-            ]
-              .filter(Boolean)
-              .join(", ");
+            const links = [goal ? `goal: ${goal}` : null].filter(Boolean).join(", ");
             return `- ${e.title}${e.description ? `: ${e.description}` : ""} (${when}${links ? `; ${links}` : ""})`;
           })
           .join("\n")
@@ -266,9 +240,6 @@ You have read-only access to their full workspace:${localTimeText}
 ## Goals
 ${goalsText}
 
-## Actions
-${actionsText}
-
 ## KPIs
 ${kpisText}
 
@@ -289,7 +260,7 @@ ${connectionsText}
 
 Use this context to:
 - Clarify goals and break them into next steps
-- Track KPIs, Do-list items, and actions together
+- Track KPIs and Do-list items together
 - Spot links across notes, files, calendar, and the knowledge graph
 - Suggest priorities based on deadlines and status
 
@@ -302,7 +273,7 @@ export async function fetchUserContext(userId: string): Promise<UserContext> {
   const calendarFrom = new Date(now.getTime() - 14 * 86400000);
   const calendarTo = new Date(now.getTime() + 90 * 86400000);
 
-  const [user, goals, actions, kpis, doItems, documents, connections, calendarEvents, fileUploads] =
+  const [user, goals, kpis, doItems, documents, connections, calendarEvents, fileUploads] =
     await Promise.all([
       prisma.user.findUniqueOrThrow({
         where: { id: userId },
@@ -321,19 +292,6 @@ export async function fetchUserContext(userId: string): Promise<UserContext> {
         },
         orderBy: [{ position: "asc" }, { updatedAt: "desc" }],
         take: ENTITY_LIMITS.goals,
-      }),
-      prisma.action.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          status: true,
-          dueDate: true,
-          goalId: true,
-        },
-        orderBy: [{ status: "asc" }, { position: "asc" }, { updatedAt: "desc" }],
-        take: ENTITY_LIMITS.actions,
       }),
       prisma.kpi.findMany({
         where: { userId },
@@ -403,7 +361,7 @@ export async function fetchUserContext(userId: string): Promise<UserContext> {
       }),
     ]);
 
-  return { user, goals, actions, kpis, doItems, documents, connections, calendarEvents, fileUploads };
+  return { user, goals, kpis, doItems, documents, connections, calendarEvents, fileUploads };
 }
 
 export async function chatWithDeepSeek(

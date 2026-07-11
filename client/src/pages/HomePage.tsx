@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, SlidersHorizontal } from "lucide-react";
-import { api, type Goal, type Action, type Document, type CalendarEvent, type Kpi, type DoItem } from "@/lib/api";
+import { api, type Goal, type Document, type CalendarEvent, type Kpi, type DoItem } from "@/lib/api";
 import type { OverviewLayout, OverviewSectionId } from "@/lib/overview";
 import { OverviewCustomize } from "@/components/OverviewCustomize";
 
@@ -23,7 +23,6 @@ const DEFAULT_LAYOUT: OverviewLayout = {
     { id: "kpis", visible: true },
     { id: "upcoming", visible: true },
     { id: "goals", visible: true },
-    { id: "actions", visible: true },
     { id: "notes", visible: true },
   ],
 };
@@ -39,7 +38,6 @@ type SectionData = {
 
 export function HomePage() {
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [actions, setActions] = useState<Action[]>([]);
   const [kpis, setKpis] = useState<Kpi[]>([]);
   const [doItems, setDoItems] = useState<DoItem[]>([]);
   const [notes, setNotes] = useState<Document[]>([]);
@@ -58,15 +56,13 @@ export function HomePage() {
     setOverviewError(null);
     Promise.all([
       api.goals.list(),
-      api.actions.list(),
       api.kpis.list(),
       api.doList.list(),
       api.documents.list(),
       api.calendar.list({ upcoming: true }),
     ])
-      .then(([g, a, k, d, n, e]) => {
+      .then(([g, k, d, n, e]) => {
         setGoals(g.filter((x) => x.status === "ACTIVE").slice(0, 5));
-        setActions(a.filter((x) => x.status !== "DONE").slice(0, 5));
         setKpis(k.slice(0, 5));
         setDoItems(d.filter((x) => !x.done).slice(0, 5));
         setNotes(n.slice(0, 5));
@@ -136,16 +132,6 @@ export function HomePage() {
         empty: "No active goals",
         items: goals.map((g) => ({ id: g.id, title: g.title })),
       },
-      actions: {
-        title: "Actions",
-        link: "/actions",
-        empty: "No pending actions",
-        items: actions.map((a) => ({
-          id: a.id,
-          title: a.title,
-          meta: a.status.replace("_", " ").toLowerCase(),
-        })),
-      },
       notes: {
         title: "Notes",
         link: "/notes",
@@ -158,7 +144,7 @@ export function HomePage() {
         })),
       },
     }),
-    [doItems, kpis, events, goals, actions, notes]
+    [doItems, kpis, events, goals, notes]
   );
 
   const visibleSections = layout.sections.filter((s) => s.visible);

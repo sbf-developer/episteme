@@ -5,6 +5,7 @@ const typeColors: Record<string, string> = {
   DOCUMENT: "#0071e3",
   GOAL: "#34c759",
   ACTION: "#ff9500",
+  DO_ITEM: "#ff9500",
   CALENDAR_EVENT: "#af52de",
   FILE: "#5856d6",
 };

@@ -25,6 +25,7 @@ const typeColors: Record<string, string> = {
   DOCUMENT: "#0071e3",
   GOAL: "#34c759",
   ACTION: "#ff9500",
+  DO_ITEM: "#ff9500",
   CALENDAR_EVENT: "#af52de",
   FILE: "#5856d6",
 };
@@ -122,11 +123,11 @@ export function GraphPage() {
       if (sourceParts.length < 2 || targetParts.length < 2) return;
 
       const [sourceType, sourceId] = sourceParts as [
-        "DOCUMENT" | "GOAL" | "ACTION" | "CALENDAR_EVENT" | "FILE",
+        "DOCUMENT" | "GOAL" | "ACTION" | "DO_ITEM" | "CALENDAR_EVENT" | "FILE",
         string,
       ];
       const [targetType, targetId] = targetParts as [
-        "DOCUMENT" | "GOAL" | "ACTION" | "CALENDAR_EVENT" | "FILE",
+        "DOCUMENT" | "GOAL" | "ACTION" | "DO_ITEM" | "CALENDAR_EVENT" | "FILE",
         string,
       ];
 
@@ -235,7 +236,7 @@ export function GraphPage() {
       <div className="min-h-0 flex-1">
         {nodes.length === 0 ? (
           <div className="flex h-full min-h-[40vh] items-center justify-center px-4 text-center text-sm text-[var(--color-text-tertiary)]">
-            Create notes, goals, or actions to see them here.
+            Create notes, goals, or to-dos to see them here.
           </div>
         ) : (
           <ReactFlow

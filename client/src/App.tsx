@@ -7,7 +7,6 @@ import { HomePage } from "@/pages/HomePage";
 import { NotesPage } from "@/pages/NotesPage";
 import { NoteEditorPage } from "@/pages/NoteEditorPage";
 import { GoalsPage } from "@/pages/GoalsPage";
-import { ActionsPage } from "@/pages/ActionsPage";
 import { GraphPage } from "@/pages/GraphPage";
 import { CalendarPage } from "@/pages/CalendarPage";
 import { DocumentsPage } from "@/pages/DocumentsPage";
@@ -35,7 +34,6 @@ export function App() {
               <Route path="/goals" element={<GoalsPage />} />
               <Route path="/kpis" element={<KpisPage />} />
               <Route path="/do-list" element={<DoListPage />} />
-              <Route path="/actions" element={<ActionsPage />} />
               <Route path="/graph" element={<GraphPage />} />
               <Route path="/ai" element={<AiPage />} />
             </Route>

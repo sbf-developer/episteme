@@ -13,7 +13,7 @@ searchRoutes.get("/", async (c) => {
   const q = c.req.query("q")?.trim().slice(0, 200);
   if (!q) return c.json({ results: [] });
 
-  const [documents, goals, actions, events, files, kpis, doItems] = await Promise.all([
+  const [documents, goals, events, files, kpis, doItems] = await Promise.all([
     prisma.document.findMany({
       where: {
         userId,
@@ -26,17 +26,6 @@ searchRoutes.get("/", async (c) => {
       select: { id: true, title: true, type: true, updatedAt: true },
     }),
     prisma.goal.findMany({
-      where: {
-        userId,
-        OR: [
-          { title: { contains: q, mode: "insensitive" } },
-          { description: { contains: q, mode: "insensitive" } },
-        ],
-      },
-      take: 10,
-      select: { id: true, title: true, status: true, updatedAt: true },
-    }),
-    prisma.action.findMany({
       where: {
         userId,
         OR: [
@@ -107,13 +96,6 @@ searchRoutes.get("/", async (c) => {
       title: g.title,
       subtitle: g.status,
       updatedAt: g.updatedAt,
-    })),
-    ...actions.map((a) => ({
-      id: a.id,
-      type: "action" as const,
-      title: a.title,
-      subtitle: a.status,
-      updatedAt: a.updatedAt,
     })),
     ...events.map((e) => ({
       id: e.id,

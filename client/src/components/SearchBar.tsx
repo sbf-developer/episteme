@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, FileText, Target, CheckSquare, X, Calendar, FolderUp, Gauge, ListTodo } from "lucide-react";
+import { Search, FileText, Target, X, Calendar, FolderUp, Gauge, ListTodo } from "lucide-react";
 import { api, type SearchResult } from "@/lib/api";
 
 type SearchBarProps = {
@@ -66,8 +66,6 @@ export function SearchBar({ collapsed = false, className = "" }: SearchBarProps)
         return <FileText size={14} />;
       case "goal":
         return <Target size={14} />;
-      case "action":
-        return <CheckSquare size={14} />;
       case "event":
         return <Calendar size={14} />;
       case "file":
@@ -85,7 +83,6 @@ export function SearchBar({ collapsed = false, className = "" }: SearchBarProps)
     setExpanded(false);
     if (r.type === "document") navigate(`/notes/${r.id}`);
     else if (r.type === "goal") navigate(`/goals`);
-    else if (r.type === "action") navigate(`/actions`);
     else if (r.type === "event") navigate(`/calendar`);
     else if (r.type === "kpi") navigate(`/kpis`);
     else if (r.type === "do-item") navigate(`/do-list`);

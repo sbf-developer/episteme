@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   FileText,
   Target,
-  CheckSquare,
   GitBranch,
   MessageSquare,
   LogOut,
@@ -28,7 +27,6 @@ const nav = [
   { to: "/goals", icon: Target, label: "Goals" },
   { to: "/kpis", icon: Gauge, label: "KPIs" },
   { to: "/do-list", icon: ListTodo, label: "Do-list" },
-  { to: "/actions", icon: CheckSquare, label: "Actions" },
   { to: "/graph", icon: GitBranch, label: "Graph" },
   { to: "/ai", icon: MessageSquare, label: "AI" },
 ];

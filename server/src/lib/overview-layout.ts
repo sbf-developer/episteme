@@ -6,7 +6,6 @@ export const OVERVIEW_SECTION_IDS = [
   "kpis",
   "upcoming",
   "goals",
-  "actions",
   "notes",
 ] as const;
 
@@ -28,13 +27,12 @@ export const DEFAULT_OVERVIEW_LAYOUT: OverviewLayout = {
     { id: "kpis", visible: true },
     { id: "upcoming", visible: true },
     { id: "goals", visible: true },
-    { id: "actions", visible: true },
     { id: "notes", visible: true },
   ],
 };
 
 const sectionSchema = z.object({
-  id: z.enum(OVERVIEW_SECTION_IDS),
+  id: z.string(),
   visible: z.boolean(),
 });
 
@@ -49,9 +47,10 @@ export function normalizeOverviewLayout(input: unknown): OverviewLayout {
 
   if (parsed.success) {
     for (const section of parsed.data.sections) {
-      if (seen.has(section.id)) continue;
-      seen.add(section.id);
-      ordered.push(section);
+      if (!OVERVIEW_SECTION_IDS.includes(section.id as OverviewSectionId)) continue;
+      if (seen.has(section.id as OverviewSectionId)) continue;
+      seen.add(section.id as OverviewSectionId);
+      ordered.push(section as OverviewSectionConfig);
     }
   }
 
