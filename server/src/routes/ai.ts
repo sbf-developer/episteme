@@ -125,7 +125,18 @@ aiRoutes.post("/chat", async (c) => {
   try {
     reply = await chatWithDeepSeek(systemPrompt, messages);
   } catch {
-    return c.json({ error: "AI service unavailable" }, 503);
+    const assistantMsg = await prisma.aiMessage.create({
+      data: {
+        threadId,
+        role: "ASSISTANT",
+        content: "AI service is temporarily unavailable. Please try again.",
+      },
+    });
+    await prisma.aiThread.update({
+      where: { id: threadId },
+      data: { updatedAt: new Date() },
+    });
+    return c.json({ threadId, userMessage: userMsg, message: assistantMsg });
   }
 
   const assistantMsg = await prisma.aiMessage.create({

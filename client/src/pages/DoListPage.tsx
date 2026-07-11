@@ -50,6 +50,7 @@ export function DoListPage() {
       await load();
     } catch {
       setItems((prev) => prev.map((i) => (i.id === id ? { ...i, done } : i)));
+      setError("Could not update item");
     }
   };
 
@@ -75,6 +76,7 @@ export function DoListPage() {
       if (previous) {
         setItems((prev) => prev.map((i) => (i.id === id ? { ...i, title: previous } : i)));
       }
+      setError("Could not save changes");
     }
   };
 

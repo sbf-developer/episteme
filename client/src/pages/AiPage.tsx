@@ -72,6 +72,7 @@ export function AiPage() {
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const openRequestRef = useRef(0);
   const sendRequestRef = useRef(0);
+  const threadsLoadGen = useRef(0);
   const instructionsSaveGen = useRef(0);
   const hasAutoOpened = useRef(false);
   const wantsNewChat = useRef(false);
@@ -122,19 +123,22 @@ export function AiPage() {
   };
 
   const loadThreads = useCallback(async (q?: string, options?: { silent?: boolean }) => {
+    const gen = ++threadsLoadGen.current;
     if (!options?.silent) {
       setLoadingThreads(true);
       setThreadsError(null);
     }
     try {
       const list = await api.ai.threads(q);
+      if (gen !== threadsLoadGen.current) return;
       setThreads(list);
     } catch (err) {
+      if (gen !== threadsLoadGen.current) return;
       if (!options?.silent) {
         setThreadsError(err instanceof Error ? err.message : "Failed to load chats");
       }
     } finally {
-      if (!options?.silent) setLoadingThreads(false);
+      if (gen === threadsLoadGen.current && !options?.silent) setLoadingThreads(false);
     }
   }, []);
 
@@ -225,12 +229,13 @@ export function AiPage() {
   };
 
   const openThread = useCallback(async (id: string) => {
-    sendRequestRef.current += 1;
-    wantsNewChat.current = false;
     if (id === threadId) {
       if (isNarrow) closeThreads();
       return;
     }
+    cancelRename();
+    sendRequestRef.current += 1;
+    wantsNewChat.current = false;
     const requestId = ++openRequestRef.current;
     setThreadId(id);
     setMessages([]);
@@ -335,7 +340,7 @@ export function AiPage() {
       ]);
       setInput(userMsg);
     } finally {
-      if (requestId === sendRequestRef.current) setSending(false);
+      setSending(false);
     }
   };
 
@@ -410,7 +415,7 @@ export function AiPage() {
               }`}
             >
               <div className="min-w-0 flex-1">
-                {renamingId === t.id && showThreads && !isNarrow ? (
+                {renamingId === t.id && showThreads ? (
                   <input
                     ref={renameInputRef}
                     value={renameDraft}
@@ -500,7 +505,7 @@ export function AiPage() {
               <PanelLeft size={17} strokeWidth={1.75} />
             </button>
           )}
-          {threadId && renamingId === threadId && (!showThreads || isNarrow) ? (
+          {threadId && renamingId === threadId && !showThreads ? (
             <input
               ref={renameInputRef}
               value={renameDraft}
