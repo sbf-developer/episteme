@@ -6,14 +6,9 @@ Personal productivity workspace — goals, actions, KPIs, do-list, notes, calend
 
 ## Screenshots
 
-### Overview
-![Dasein overview](docs/screenshots/overview.png)
 
-### AI chat
 ![Dasein AI chat](docs/screenshots/ai-chat.png)
 
-### Knowledge graph
-![Dasein knowledge graph](docs/screenshots/graph.png)
 
 ## Features
 
